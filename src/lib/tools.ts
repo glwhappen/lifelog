@@ -129,25 +129,36 @@ function readTools(): ToolDef[] {
     {
       name: 'habit_stats',
       title: '习惯打卡统计',
-      description: '每个习惯的打卡明细、完成率、当前连续天数与最长连续天数。',
+      description: '每个习惯的打卡明细、完成率、当前连续天数与最长连续天数。with_cells=true 时额外返回逐日打卡明细。',
       scope: 'read',
       inputSchema: {
         type: 'object',
-        properties: { from: { type: 'string' }, to: { type: 'string' }, days: { type: 'number' }, range: { type: 'string', enum: ['today', 'week', 'month', 'year'] } },
+        properties: {
+          from: { type: 'string' },
+          to: { type: 'string' },
+          days: { type: 'number' },
+          range: { type: 'string', enum: ['today', 'week', 'month', 'year'] },
+          with_cells: { type: 'boolean', description: '是否返回逐日明细（数据量大，默认 false）' },
+        },
       },
       handler: async (ctx, a) => {
         const stats = await habitStats(uid(ctx), tz(ctx), a);
         return stats.map((s) => ({
-          habit: s.habit.name,
-          kind: s.habit.kind,
-          target: s.habit.target,
-          unit: s.habit.unit,
+          habit: {
+            id: s.habit.id,
+            name: s.habit.name,
+            icon: s.habit.icon,
+            kind: s.habit.kind,
+            target: s.habit.target,
+            unit: s.habit.unit,
+          },
           doneDays: s.doneDays,
           totalDays: s.totalDays,
           rate: Math.round(s.rate * 1000) / 1000,
           currentStreak: s.currentStreak,
           longestStreak: s.longestStreak,
           today: s.cells[s.cells.length - 1]?.value ?? 0,
+          ...(a.with_cells ? { cells: s.cells } : {}),
         }));
       },
     },

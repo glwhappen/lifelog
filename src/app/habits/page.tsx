@@ -49,12 +49,8 @@ function Habits() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [list, st] = await Promise.all([
-        callGet<Habit[]>('list_habits'),
-        callGet<HabitStat[]>('habit_stats', { days }),
-      ]);
-      const byId = new Map(list.map((h) => [h.id, h]));
-      setStats(st.map((s) => ({ ...s, habit: byId.get(s.habit.id) ?? s.habit })));
+      const st = await callGet<HabitStat[]>('habit_stats', { days, with_cells: true });
+      setStats(st);
     } catch (e: any) {
       show(e.error || '加载失败', 'err');
     } finally {
