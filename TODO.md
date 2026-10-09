@@ -24,7 +24,7 @@
 - [ ] `bulkCreateEntries` 的 currency 字段丢失（当前固定默认值）
 - [ ] `digest` 逐日调用 `getDay`，区间很大时是 N 次查询，可改为一次聚合查询
 - [ ] `habitStats` 每次拉 365 天历史算连续天数，习惯多时有优化空间
-- [ ] 缺少自动化测试（目前只有 typecheck + build）
+- [x] ~~缺少自动化测试~~ → 已补 177 个用例（97 单元 + 80 集成），见 README「测试」
 - [ ] `settings` 页里习惯的增删改了，但编辑图标/颜色还没做 UI
 
 ## 待确认

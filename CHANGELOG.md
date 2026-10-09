@@ -2,6 +2,49 @@
 
 本项目遵循 [约定式提交](https://www.conventionalcommits.org/)。
 
+## [0.1.2] — 2026-10-10
+
+补上自动化测试（此前只有 typecheck + build），并修掉测试暴露出来的 3 个问题。
+
+### Added
+
+- **测试体系**：177 个用例（97 单元 + 80 集成），零额外运行时依赖（vitest）
+  - `tests/unit/`：时区日期运算与口语日期解析、区间解析、GPX 解析与轨迹抽稀、
+    速记分流规则、类型元数据
+  - `tests/integration/`：真 Postgres 上的待办/习惯生命周期、`get_day` 聚合、
+    财务与统计、Markdown 导出、REST 与 MCP 协议、API Key 鉴权
+- `npm test`（单元，不需要数据库）/ `npm run test:db`（自动起临时 Postgres，用完销毁）
+- `.github/workflows/test.yml`：类型检查 + 迁移 + 测试 + 构建
+- 工具输出的**契约断言**：`get_day` 顶层字段、`habit_stats` 的 `habit` 对象、
+  `daily_digest` 的 Markdown 段落都被钉住，防止跨层字段名悄悄漂移
+
+### Fixed
+
+- **`parseLooseDay` 不校验日期有效性**：`2026-13-45` 这种"格式对但日期非法"的串会被
+  原样返回（最终写进数据库）。现在会验一次 `Date` 有效性，非法则返回 null。
+- **`list_tasks` 的 `pending` 漏掉计划在未来的任务**：任务若计划在明天，在
+  今天/未完成/逾期/已完成 四个标签下都看不到，只有「全部」里能找到。
+  现在 `pending` = 所有未完成（含未来）。
+- **`add_task` 文档与行为不一致**：描述说"不传 planned_day 会进收集箱"，
+  代码却默认今天。现在语义明确为「给日期→那天 / 不给→今天 / 显式 null→收集箱」，
+  JSON Schema 允许 `null`。
+- **轨迹抽稀对无时间戳的 GPX 失效**：原先 `dt` 缺省为 `Infinity` 使条件恒真，
+  纯轨迹文件会被原样全量导入。现在缺时间戳时只按距离抽稀。
+- **`currentUser()` 在无请求上下文时抛错**：改为把「取不到 cookie」当作未登录，
+  纯 API Key 调用方不会因为不在 Next 请求里而 500。
+
+### Changed
+
+- 抽稀逻辑独立成纯函数 `decimateTrack()`，速记判定独立成 `classifyCapture()`，
+  两者都可单测。
+- 12 个工具的 `description` 补充了入参与使用场景 —— 描述是模型选工具的唯一依据，
+  `log_expense` / `log_income` 原先是 5 个字的「记录支出。」。
+
+### Docs
+
+- README 新增「测试」章节（怎么跑、两层各测什么）
+- AGENTS.md 补充：改完必跑 `typecheck + test + build`；新增工具必须同步更新契约断言
+
 ## [0.1.1] — 2026-10-10
 
 一轮完整的视觉回归（桌面/手机 × 亮色/暗色 × 7 个页面 + 空态 + 交互态）后修的 bug。

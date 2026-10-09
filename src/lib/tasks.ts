@@ -15,7 +15,19 @@ export interface TaskInput {
   source?: string;
 }
 
+/**
+ * 新建任务。planned_day 语义：
+ *   - 传日期（含「明天/周一」这类口语）→ 计划那天
+ *   - 传 null 或空串 → 收集箱
+ *   - 字段缺失（undefined）→ 默认今天（「记录每日 todo」是本项目的主场景）
+ */
 export async function createTask(userId: string, tz: string, input: TaskInput): Promise<Task> {
+  const planned =
+    input.planned_day === null || input.planned_day === ''
+      ? null
+      : input.planned_day
+        ? normDay(input.planned_day, tz)
+        : todayIn(tz);
   const row = await one<Task>(
     `insert into tasks (user_id, title, note, planned_day, due_day, priority, tags, source)
      values ($1,$2,$3,$4,$5,$6,$7,$8) returning ${COLS}`,
@@ -23,7 +35,7 @@ export async function createTask(userId: string, tz: string, input: TaskInput): 
       userId,
       input.title.trim(),
       input.note ?? null,
-      input.planned_day === null ? null : input.planned_day ? normDay(input.planned_day, tz) : todayIn(tz),
+      planned,
       input.due_day === null ? null : input.due_day ? normDay(input.due_day, tz) : null,
       Number(input.priority) || 0,
       input.tags ?? [],
@@ -51,9 +63,10 @@ export async function listTasks(userId: string, tz: string, query: TaskQuery = {
   const state = query.state ?? 'all';
 
   if (state === 'pending') {
+    // 「未完成」= 所有还没做的，包含计划在未来的。
+    // 以前这里加了 planned_day <= today，导致「明天要做」的任务在
+    // 今天/未完成/逾期/已完成 任何一个标签下都看不见（只有全部能看到）。
     where.push(`status = 'pending'`);
-    args.push(today);
-    where.push(`(planned_day is null or planned_day <= $${args.length})`);
   } else if (state === 'today') {
     where.push(`status = 'pending'`);
     args.push(today);

@@ -109,7 +109,7 @@ function readTools(): ToolDef[] {
       name: 'list_tasks',
       title: '查待办',
       description:
-        '列出任务。state: pending 未完成 / today 今天计划 / overdue 逾期 / done 已完成 / all 全部。',
+        '列出任务。state: pending 所有未完成（含计划在未来的）/ today 今天计划 / overdue 逾期 / done 已完成 / all 全部。',
       scope: 'read',
       inputSchema: {
         type: 'object',
@@ -178,7 +178,7 @@ function readTools(): ToolDef[] {
     {
       name: 'list_habits',
       title: '习惯清单',
-      description: '列出全部习惯（含计数型的目标值）。',
+      description: '列出全部习惯（含计数型的目标值、单位与是否启用）。打卡前先看这个拿到准确名称。',
       scope: 'read',
       inputSchema: { type: 'object', properties: {} },
       handler: async (ctx) => {
@@ -214,7 +214,7 @@ function readTools(): ToolDef[] {
     {
       name: 'list_locations',
       title: '位置轨迹',
-      description: '按区间读取定位点，并给出总里程。',
+      description: '按区间读取定位点，并给出总里程与轨迹点列表（含经纬度/精度/地名）。',
       scope: 'read',
       inputSchema: {
         type: 'object',
@@ -268,14 +268,17 @@ function writeTools(): ToolDef[] {
     {
       name: 'add_task',
       title: '新建待办',
-      description: '新建一条待办。planned_day 默认今天；不传 planned_day 会进「收集箱」。',
+      description: '新建一条待办。planned_day 可传日期或「今天/明天/周一」；不传默认今天；显式传 null 则进「收集箱」。',
       scope: 'write',
       inputSchema: {
         type: 'object',
         properties: {
           title: { type: 'string' },
           note: { type: 'string' },
-          planned_day: { type: 'string', description: 'YYYY-MM-DD 或 今天/明天/周一' },
+          planned_day: {
+            type: ['string', 'null'],
+            description: 'YYYY-MM-DD 或 今天/明天/周一；null 表示进收集箱',
+          },
           due_day: { type: 'string' },
           priority: { type: 'number', description: '0 普通 1 重要 2 紧急' },
           tags: { type: 'array', items: { type: 'string' } },
@@ -303,7 +306,7 @@ function writeTools(): ToolDef[] {
     {
       name: 'update_task',
       title: '修改待办',
-      description: '修改任务标题/备注/计划日/截止日/优先级/标签/状态。',
+      description: '修改任务：标题/备注/计划日/截止日/优先级/标签/状态。status 改回 pending 会同时清空完成时间。task 可传 id 或标题关键词。',
       scope: 'write',
       inputSchema: {
         type: 'object',
@@ -343,7 +346,7 @@ function writeTools(): ToolDef[] {
     {
       name: 'delete_task',
       title: '删除待办',
-      description: '软删除任务（同时隐藏它的完成流水）。',
+      description: '软删除任务，并同时隐藏它镜像出来的完成流水（先 list_tasks 拿到 id 或标题）。',
       scope: 'write',
       inputSchema: { type: 'object', properties: { task: { type: 'string' } }, required: ['task'] },
       handler: async (ctx, a) => ({ ok: await deleteTask(uid(ctx), a.task) }),
@@ -351,7 +354,7 @@ function writeTools(): ToolDef[] {
     {
       name: 'add_idea',
       title: '记灵感',
-      description: '快速记一条灵感/闪念，一句话即可。',
+      description: '快速记一条灵感/闪念，一句话即可，不需要标题。',
       scope: 'write',
       inputSchema: {
         type: 'object',
@@ -375,7 +378,8 @@ function writeTools(): ToolDef[] {
     {
       name: 'log_expense',
       title: '记一笔支出',
-      description: '记录支出。',
+      description:
+        '记一笔支出。amount 必填；category 传分类（餐饮/交通/购物/居住/通讯/娱乐/医疗/学习/人情 等，建议先用 finance_summary 看已有分类以保持一致）；note 是备注；day 支持 今天/昨天/YYYY-MM-DD。',
       scope: 'write',
       inputSchema: {
         type: 'object',
@@ -387,7 +391,8 @@ function writeTools(): ToolDef[] {
     {
       name: 'log_income',
       title: '记一笔收入',
-      description: '记录收入。',
+      description:
+        '记一笔收入。category 常用：工资/奖金/报销/理财/红包/兼职/退款；note 是备注；day 支持 今天/昨天/YYYY-MM-DD。',
       scope: 'write',
       inputSchema: {
         type: 'object',
@@ -422,7 +427,7 @@ function writeTools(): ToolDef[] {
     {
       name: 'uncheck_habit',
       title: '取消打卡',
-      description: '撤销某天的习惯打卡。',
+      description: '撤销某天的习惯打卡（默认今天）。',
       scope: 'write',
       inputSchema: { type: 'object', properties: { habit: { type: 'string' }, day: { type: 'string' } }, required: ['habit'] },
       handler: async (ctx, a) => ({ ok: await uncheckHabit(uid(ctx), a.habit, a.day, tz(ctx)) }),
@@ -430,7 +435,7 @@ function writeTools(): ToolDef[] {
     {
       name: 'add_habit',
       title: '新增/修改习惯',
-      description: '新增一个习惯，或按名称覆盖已有习惯的配置。',
+      description: '新增一个习惯，或按名称覆盖已有习惯的配置。kind: bool=打卡型 / count=计数型（配 target 与 unit）。',
       scope: 'write',
       inputSchema: {
         type: 'object',
@@ -448,7 +453,7 @@ function writeTools(): ToolDef[] {
     {
       name: 'delete_habit',
       title: '删除习惯',
-      description: '删除一个习惯（连带其打卡记录）。',
+      description: '删除一个习惯，连带它的全部打卡记录，不可恢复。',
       scope: 'write',
       inputSchema: { type: 'object', properties: { habit: { type: 'string' } }, required: ['habit'] },
       handler: async (ctx, a) => ({ ok: await deleteHabit(uid(ctx), a.habit) }),
@@ -520,7 +525,7 @@ function writeTools(): ToolDef[] {
     {
       name: 'update_entry',
       title: '修改流水',
-      description: '修改一条流水的内容/金额/分类/标签。',
+      description: '修改一条流水的内容/金额/分类/标签（先 query_entries 拿到 id）。',
       scope: 'write',
       inputSchema: {
         type: 'object',
@@ -543,7 +548,7 @@ function writeTools(): ToolDef[] {
     {
       name: 'delete_entry',
       title: '删除流水',
-      description: '软删除一条流水。',
+      description: '软删除一条流水（先 query_entries 拿到 id）。删除后不再出现在任何统计里。',
       scope: 'write',
       inputSchema: { type: 'object', properties: { id: { type: 'number' } }, required: ['id'] },
       handler: async (ctx, a) => ({ ok: await deleteEntry(uid(ctx), a.id) }),
@@ -564,58 +569,87 @@ function writeTools(): ToolDef[] {
   ];
 }
 
+/** 速记分流的判定结果（纯数据，不碰数据库） */
+export type CaptureDecision =
+  | { routed: 'expense'; amount: number; category: string }
+  | { routed: 'income'; amount: number }
+  | { routed: 'task' }
+  | { routed: 'idea' }
+  | { routed: 'done' }
+  | { routed: 'note' }
+  | { routed: 'metric'; kind: string; value: number; unit?: string };
+
+/**
+ * 纯规则判定「这句话该记成什么」。
+ * 抽出来是为了能单测——这个规则很容易在改动中默默跑偏（已经出过一次）。
+ * 优先级：金额 > 数值指标 > 待办意图 > 灵感 > 完成 > 笔记。
+ * 之所以金额优先：「午饭 35 元」里也可能含「要」字，但用户显然是在记账。
+ */
+export function classifyCapture(text: string): CaptureDecision {
+  const t = text.trim();
+
+  const amount = extractAmount(t);
+  if (amount !== null) {
+    const isIncome = /(?:收入|收到|进账|报销|工资|奖金|红包|退款|赚了|卖出)/.test(t);
+    return isIncome ? { routed: 'income', amount } : { routed: 'expense', amount, category: categorize(t) };
+  }
+
+  const metric = parseMetric(t);
+  if (metric) return { routed: 'metric', kind: metric.kind, value: metric.value, unit: metric.unit };
+
+  if (/(?:要|需要|记得|别忘|待办|提醒我|安排)/.test(t)) return { routed: 'task' };
+  if (/(?:想法|灵感|点子|idea)/i.test(t)) return { routed: 'idea' };
+  if (/(?:完成|做完了|搞定了|已完成|收工)/.test(t)) return { routed: 'done' };
+  return { routed: 'note' };
+}
+
 /**
  * 规则式速记分流：不调模型，零成本、可预测。
- * 复杂的语义理解交给调用方的大模型（它调 add_task / log_expense 更准）。
+ * 判定用 classifyCapture（纯函数、有单测），这里只负责落库。
  */
 export async function quickCapture(ctx: ToolCtx, text: string, day?: string) {
   const t = text.trim();
   const u = uid(ctx);
   const tzz = tz(ctx);
   const dayHint = day ? normDay(day, tzz) : extractDay(t, tzz);
+  const d = classifyCapture(t);
 
-  // 1) 金额 → 支出 / 收入
-  const amount = extractAmount(t);
-  if (amount !== null) {
-    const isIncome = /(?:收入|收到|进账|报销|工资|奖金|红包|退款|赚了|卖出)/.test(t);
+  if (d.routed === 'expense' || d.routed === 'income') {
     const entry = await createEntry(u, tzz, {
-      kind: isIncome ? 'income' : 'expense',
-      amount,
+      kind: d.routed,
+      amount: d.amount,
       title: t,
-      category: isIncome ? undefined : categorize(t),
+      category: d.routed === 'expense' ? d.category : undefined,
       day: dayHint,
       source: 'mcp',
     });
-    return { routed: isIncome ? 'income' : 'expense', entry };
+    return { routed: d.routed, entry };
   }
 
-  // 2) 数值指标
-  const metric = parseMetric(t);
-  if (metric) {
+  if (d.routed === 'metric') {
     const entry = await createEntry(u, tzz, {
-      kind: metric.kind,
-      amount: metric.value,
-      category: metric.unit,
+      kind: d.kind,
+      amount: d.value,
+      category: d.unit,
       content: t,
       day: dayHint,
       source: 'mcp',
-      meta: { unit: metric.unit },
+      meta: { unit: d.unit },
     });
-    return { routed: metric.kind, entry };
+    return { routed: d.kind, entry };
   }
 
-  // 3) 待办意图
-  if (/(?:要|需要|记得|别忘|待办|提醒我|安排)/.test(t)) {
+  if (d.routed === 'task') {
     const task = await createTask(u, tzz, { title: t, planned_day: dayHint, source: 'mcp' });
     return { routed: 'task', task };
   }
 
-  // 4) 灵感 / 完成 / 笔记
-  if (/(?:想法|灵感|点子|idea)/i.test(t)) {
+  if (d.routed === 'idea') {
     const entry = await createEntry(u, tzz, { kind: 'idea', content: t, day: dayHint, source: 'mcp' });
     return { routed: 'idea', entry };
   }
-  if (/(?:完成|做完了|搞定了|已完成|做完了|收工)/.test(t)) {
+
+  if (d.routed === 'done') {
     const entry = await createEntry(u, tzz, { kind: 'done', title: t, day: dayHint, source: 'mcp' });
     return { routed: 'done', entry };
   }
@@ -624,8 +658,8 @@ export async function quickCapture(ctx: ToolCtx, text: string, day?: string) {
   return { routed: 'note', entry };
 }
 
-/** 从一句话里抽金额：只认有货币标记的（避免把「跑步 5 公里」当花钱） */
-function extractAmount(text: string): number | null {
+/** 从一句话里抽金额（导出以便单测）：只认有货币标记的（避免把「跑步 5 公里」当花钱） */
+export function extractAmount(text: string): number | null {
   let m = text.match(/(\d+(?:\.\d{1,2})?)\s*(?:元|块钱|块|人民币|圆)/);
   if (!m) m = text.match(/[¥￥]\s*(\d+(?:\.\d{1,2})?)/);
   if (!m) m = text.match(/(?:花了|付了|付|充了|充值|收到|买了)\D{0,4}?(\d+(?:\.\d{1,2})?)(?!\s*(?:公里|km|千克|公斤|kg|分钟|小时|杯))/);
@@ -635,7 +669,7 @@ function extractAmount(text: string): number | null {
 }
 
 /** 抽一句话里的日期（今天/明天/后天/下周X/周X/3月5日），抽不到返回 undefined */
-function extractDay(text: string, tzz: string): string | undefined {
+export function extractDay(text: string, tzz: string): string | undefined {
   const today = todayIn(tzz);
   const table: Array<[RegExp, number]> = [
     [/今天|今日/, 0],
@@ -666,7 +700,7 @@ function extractDay(text: string, tzz: string): string | undefined {
   return undefined;
 }
 
-function parseMetric(text: string): { kind: string; value: number; unit?: string } | null {
+export function parseMetric(text: string): { kind: string; value: number; unit?: string } | null {
   let m = text.match(/(?:体重|称了?重?)\D{0,4}?(\d+(?:\.\d+)?)\s*(kg|公斤|斤)?/);
   if (m) return { kind: 'weight', value: Number(m[1]), unit: m[2] === '斤' ? '斤' : 'kg' };
   m = text.match(/(?:睡了?|睡眠时间?)\D{0,3}?(\d+(?:\.\d+)?)\s*(?:小时|个小时|h|个钟)/);
@@ -686,7 +720,7 @@ function parseMetric(text: string): { kind: string; value: number; unit?: string
   return null;
 }
 
-function categorize(text: string): string {
+export function categorize(text: string): string {
   const rules: Array<[RegExp, string]> = [
     [/早餐|午饭|午饭|午餐|晚饭|晚餐|吃饭|外卖|奶茶|咖啡|夜宵|餐厅|火锅/, '餐饮'],
     [/打车|滴滴|地铁|公交|高铁|火车|机票|油费|加油|停车|过路费/, '交通'],

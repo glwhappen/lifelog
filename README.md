@@ -314,6 +314,26 @@ npm run build        # next build
 npm run migrate      # 执行 migrations/*.sql
 ```
 
+### 测试
+
+```bash
+npm test             # 单元测试（不需要数据库；集成测试自动跳过）
+npm run test:unit    # 同上，只跑 tests/unit
+npm run test:watch   # 单元测试 watch 模式
+npm run test:db      # 起一个一次性 Postgres → 迁移 → 跑全部（含集成），跑完自动销毁
+npm run test:db -- tests/integration/http.test.ts   # 只跑某个文件
+```
+
+| 层 | 位置 | 覆盖什么 |
+| --- | --- | --- |
+| 单元 | `tests/unit/` | 时区日期运算、口语日期解析、区间解析、GPX 解析与轨迹抽稀、速记分流规则、类型元数据 |
+| 集成 | `tests/integration/` | 真 Postgres 上的待办/习惯生命周期、`get_day` 聚合、财务与统计、Markdown 导出、REST 与 MCP 协议、API Key 鉴权 |
+
+集成测试需要 `TEST_DATABASE_URL`，没设就整组 skip —— 所以 `npm test` 在任何机器上都能跑绿。
+`npm run test:db` 会自己起临时库（Docker 自动挑空闲端口），不需要手工准备环境。
+
+CI 见 `.github/workflows/test.yml`（Postgres service + 类型检查 + 迁移 + 测试 + 构建）。
+
 ```
 src/
   app/               页面 + API 路由

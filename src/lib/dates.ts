@@ -97,7 +97,11 @@ export function parseLooseDay(text: string, tz: string = env.defaultTimezone): s
   if (t === '前天') return shiftDay(today, -2);
   if (t === '明天' || t === 'tomorrow') return shiftDay(today, 1);
   if (t === '后天') return shiftDay(today, 2);
-  if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(t)) {
+    // 格式对不代表日期有效："2026-13-45" 也会命中正则，必须再验一次
+    const d = new Date(`${t}T12:00:00Z`);
+    return Number.isNaN(d.getTime()) ? null : t;
+  }
   const rel = t.match(/^([+-]?\d+)\s*(天|日|d)$/i);
   if (rel) return shiftDay(today, Number(rel[1]));
   const week = t.match(/^(?:下)?周(一|二|三|四|五|六|日|天)$/);

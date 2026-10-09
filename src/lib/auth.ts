@@ -42,8 +42,15 @@ export async function destroySession(): Promise<void> {
 }
 
 export async function currentUser(): Promise<SessionUser | null> {
-  const jar = await cookies();
-  const token = jar.get(COOKIE)?.value;
+  let token: string | undefined;
+  try {
+    const jar = await cookies();
+    token = jar.get(COOKIE)?.value;
+  } catch {
+    // 不在 Next 的请求上下文里（脚本 / 测试 / 后台任务）：当作没有会话。
+    // 这样纯 API Key 调用方永远不会因为「拿不到 cookie」而 500。
+    token = undefined;
+  }
   if (token) {
     try {
       const { payload } = await jwtVerify(token, secret());

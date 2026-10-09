@@ -113,6 +113,43 @@ export function parseGpx(xml: string): GpxPoint[] {
 }
 
 /**
+ * 轨迹抽稀：按「最小间距 minMeters 或最小间隔 minSeconds」保留点。
+ * 抽成纯函数便于单测；导入库时再用。
+ *
+ * 时间缺失的处理：没有时间戳时 dt 视为 0（只按距离抽稀）。
+ * 否则 dt=Infinity 会让条件恒真、一点不抽，一个纯轨迹文件能灌进去几十万行。
+ */
+export function decimateTrack(
+  points: GpxPoint[],
+  opts: { minMeters?: number; minSeconds?: number } = {},
+): { kept: GpxPoint[]; skipped: number } {
+  const minMeters = opts.minMeters ?? 80;
+  const minSeconds = opts.minSeconds ?? 180;
+  const kept: GpxPoint[] = [];
+  let skipped = 0;
+  let last: { p: GpxPoint; t: number | null } | null = null;
+
+  for (const p of points) {
+    const parsed = p.time ? Date.parse(p.time) : NaN;
+    const t = Number.isFinite(parsed) ? parsed : null;
+    if (!last) {
+      kept.push(p);
+      last = { p, t };
+      continue;
+    }
+    const dist = haversine(last.p.lat, last.p.lng, p.lat, p.lng);
+    const dt = last.t !== null && t !== null ? (t - last.t) / 1000 : 0;
+    if (dist >= minMeters || dt >= minSeconds) {
+      kept.push(p);
+      last = { p, t };
+    } else {
+      skipped++;
+    }
+  }
+  return { kept, skipped };
+}
+
+/**
  * 导入轨迹点：默认按「最小间距 80m 或最小间隔 3 分钟」抽稀，避免一天几千个点。
  */
 export async function importTrack(
@@ -121,24 +158,7 @@ export async function importTrack(
   points: GpxPoint[],
   opts: { minMeters?: number; minSeconds?: number; source?: string; placeName?: string } = {},
 ): Promise<{ imported: number; skipped: number }> {
-  const minMeters = opts.minMeters ?? 80;
-  const minSeconds = opts.minSeconds ?? 180;
-  const kept: GpxPoint[] = [];
-  let last: { p: GpxPoint; t: number } | null = null;
-  for (const p of points) {
-    const t = p.time ? new Date(p.time).getTime() : NaN;
-    if (!last) {
-      kept.push(p);
-      last = { p, t };
-      continue;
-    }
-    const dist = haversine(last.p.lat, last.p.lng, p.lat, p.lng);
-    const dt = Number.isFinite(t) && Number.isFinite(last.t) ? (t - last.t) / 1000 : Infinity;
-    if (dist >= minMeters || dt >= minSeconds) {
-      kept.push(p);
-      last = { p, t };
-    }
-  }
+  const { kept, skipped } = decimateTrack(points, opts);
 
   let imported = 0;
   for (const p of kept) {
@@ -151,7 +171,7 @@ export async function importTrack(
     );
     imported++;
   }
-  return { imported, skipped: points.length - kept.length };
+  return { imported, skipped };
 }
 
 function dayInTz(date: Date, tz: string): string {
