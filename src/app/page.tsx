@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
 import { Gate } from '@/components/Gate';
 import { useMe, useToast } from '@/components/Providers';
-import { call, callGet, hhmm, money, todayLocal } from '@/lib/client';
+import { call, callGet, hhmm, money, moneyShort, todayLocal } from '@/lib/client';
+import { kindMeta } from '@/lib/kinds';
 
 interface Entry {
   id: number;
@@ -39,27 +40,6 @@ interface DayData {
   summary: { mood: number | null; energy: number | null; summary: string | null; ai_summary: string | null } | null;
 }
 
-const KIND_META: Record<string, { icon: string; label: string }> = {
-  idea: { icon: '💡', label: '灵感' },
-  note: { icon: '📝', label: '记录' },
-  done: { icon: '✅', label: '完成' },
-  expense: { icon: '💸', label: '支出' },
-  income: { icon: '💰', label: '收入' },
-  mood: { icon: '🙂', label: '心情' },
-  energy: { icon: '⚡', label: '精力' },
-  sleep: { icon: '😴', label: '睡眠' },
-  weight: { icon: '⚖️', label: '体重' },
-  water: { icon: '💧', label: '饮水' },
-  workout: { icon: '🏃', label: '运动' },
-  focus: { icon: '🎯', label: '专注' },
-  reading: { icon: '📖', label: '阅读' },
-  gratitude: { icon: '🙏', label: '感恩' },
-  dream: { icon: '🌙', label: '梦境' },
-  social: { icon: '👥', label: '社交' },
-  weather: { icon: '⛅', label: '天气' },
-  metric: { icon: '📊', label: '指标' },
-};
-
 export default function TodayPage() {
   return (
     <AppShell title="今日">
@@ -72,7 +52,8 @@ export default function TodayPage() {
 
 function Today() {
   const { show } = useToast();
-  const { reload: reloadMe } = useMe();
+  const { reload: reloadMe, user } = useMe();
+  const tz = user?.timezone;
   const [data, setData] = useState<DayData | null>(null);
   const [day, setDay] = useState(todayLocal());
   const [busy, setBusy] = useState(false);
@@ -196,14 +177,14 @@ function Today() {
           </div>
           <div className="stat">
             <div className="k">支出</div>
-            <div className="v money out" style={{ fontSize: 17 }}>
-              {money(data.finance.expense)}
+            <div className="v money out" style={{ fontSize: 17 }} title={money(data.finance.expense)}>
+              {moneyShort(data.finance.expense)}
             </div>
           </div>
           <div className="stat">
             <div className="k">收入</div>
-            <div className="v money in" style={{ fontSize: 17 }}>
-              {money(data.finance.income)}
+            <div className="v money in" style={{ fontSize: 17 }} title={money(data.finance.income)}>
+              {moneyShort(data.finance.income)}
             </div>
           </div>
         </div>
@@ -329,7 +310,7 @@ function Today() {
                   </span>
                   <div className="body">
                     <div className="title">{t.title}</div>
-                    {t.done_at && <div className="meta">{hhmm(t.done_at)} 完成</div>}
+                    {t.done_at && <div className="meta">{hhmm(t.done_at, tz)} 完成</div>}
                   </div>
                   <button
                     className="btn ghost sm"
@@ -370,7 +351,7 @@ function Today() {
 
       {/* 手工流水 */}
       {groups.map(([kind, items]) => {
-        const meta = KIND_META[kind] ?? { icon: '•', label: kind };
+        const meta = kindMeta(kind);
         return (
           <div className="card" key={kind}>
             <div className="card-head">
@@ -382,7 +363,7 @@ function Today() {
             </div>
             {items.map((e) => (
               <div className="item" key={e.id}>
-                <span className="time">{hhmm(e.happened_at)}</span>
+                <span className="time">{hhmm(e.happened_at, tz)}</span>
                 <div className="body">
                   {e.title && <div className="title">{e.title}</div>}
                   {e.content && <div className="content">{e.content}</div>}
@@ -420,7 +401,7 @@ function Today() {
           </div>
           {data.finance.items.map((e) => (
             <div className="item" key={e.id}>
-              <span className="time">{hhmm(e.happened_at)}</span>
+              <span className="time">{hhmm(e.happened_at, tz)}</span>
               <div className="body">
                 <div className="title">{e.title || e.content || (e.kind === 'expense' ? '支出' : '收入')}</div>
                 <div className="meta">{e.category || '未分类'}</div>
@@ -450,7 +431,7 @@ function Today() {
             <>
               {data.places.map((p) => (
                 <div className="item" key={p.id}>
-                  <span className="time">{hhmm(p.happened_at)}</span>
+                  <span className="time">{hhmm(p.happened_at, tz)}</span>
                   <div className="body">
                     <div className="title">{p.place_name || p.city || '未知位置'}</div>
                     <div className="meta mono">
@@ -470,8 +451,10 @@ function Today() {
           <div className="card-head">
             <h2>🪞 今天总结</h2>
           </div>
-          <div className="row wrap" style={{ marginBottom: 8 }}>
-            <span className="small muted">心情</span>
+          <div className="row wrap" style={{ marginBottom: 6 }}>
+            <span className="small muted" style={{ minWidth: 30 }}>
+              心情
+            </span>
             {[1, 2, 3, 4, 5].map((v) => (
               <button
                 key={v}
@@ -483,14 +466,16 @@ function Today() {
                 {['😞', '😕', '😐', '🙂', '😄'][v - 1]}
               </button>
             ))}
-            <span className="small muted" style={{ marginLeft: 8 }}>
+          </div>
+          <div className="row wrap" style={{ marginBottom: 8 }}>
+            <span className="small muted" style={{ minWidth: 30 }}>
               精力
             </span>
             {[1, 2, 3, 4, 5].map((v) => (
               <button
                 key={v}
                 className={`habit ${data.summary?.energy === v ? 'on' : ''}`}
-                style={{ padding: '4px 10px' }}
+                style={{ padding: '4px 12px' }}
                 disabled={busy}
                 onClick={() => patch(() => call('save_summary', { day, energy: v }), '已记录精力')}
               >

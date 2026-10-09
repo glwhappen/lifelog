@@ -6,7 +6,7 @@
   --bg-sub: #f1f2f4;
   --fg: #1b1f24;
   --fg-dim: #6b7280;
-  --fg-faint: #9aa1ab;
+  --fg-faint: #868d98;
   --line: #e6e8eb;
   --line-strong: #d7dae0;
   --accent: #2f6bff;
@@ -32,7 +32,7 @@ body[theme-mode='dark'],
   --bg-sub: #22262d;
   --fg: #e8eaee;
   --fg-dim: #a1a8b3;
-  --fg-faint: #6f7885;
+  --fg-faint: #8b93a1;
   --line: #2a2f37;
   --line-strong: #363c46;
   --accent: #5b8bff;
@@ -64,6 +64,11 @@ body {
   font: 15px/1.55 -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Noto Sans SC', 'Microsoft YaHei',
     system-ui, sans-serif;
   touch-action: manipulation;
+  color-scheme: light; /* 让原生控件（日期选择器/滚动条）也跟着主题走 */
+}
+
+body[theme-mode='dark'] {
+  color-scheme: dark;
 }
 
 input,
@@ -124,6 +129,7 @@ a {
 
 .main {
   flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
@@ -216,6 +222,9 @@ a {
     flex-direction: column;
     flex: 1 1 auto;
     min-width: 0;
+    /* 关键：列方向 flex 子项默认 min-height:auto 会拒绝收缩，
+       导致 .main 被撑成内容高度、整页滚不动（手机上表现为「只能看到顶部」） */
+    min-height: 0;
   }
   .main {
     padding: 20px 24px 60px;
@@ -232,6 +241,7 @@ a {
     flex-direction: column;
     flex: 1 1 auto;
     min-width: 0;
+    min-height: 0;
   }
 }
 
@@ -401,6 +411,12 @@ select.ipt {
   border-radius: var(--radius-sm);
   padding: 9px 11px;
   outline: none;
+}
+input.ipt::placeholder,
+textarea.ipt::placeholder,
+.capture textarea::placeholder {
+  color: var(--fg-faint);
+  opacity: 1; /* Firefox 默认会再压一层透明度，暗色下几乎看不见 */
 }
 input.ipt:focus,
 textarea.ipt:focus {
@@ -577,9 +593,13 @@ textarea.ipt {
 }
 
 .heat {
-  display: flex;
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(7, 13px);
+  grid-auto-columns: 13px;
   gap: 3px;
-  flex-wrap: wrap;
+  overflow-x: auto;
+  padding-bottom: 2px;
 }
 .heat i {
   width: 13px;
@@ -587,6 +607,9 @@ textarea.ipt {
   border-radius: 3px;
   background: var(--bg-sub);
   display: block;
+}
+.heat i.pad {
+  background: transparent;
 }
 .heat i.l1 {
   background: #c7e8d3;
@@ -625,7 +648,6 @@ body[theme-mode='dark'] .heat i.l4 {
   flex: 1 1 0;
   background: var(--accent);
   border-radius: 3px 3px 0 0;
-  min-height: 2px;
   position: relative;
 }
 .bars .b.neg {
@@ -641,6 +663,7 @@ body[theme-mode='dark'] .heat i.l4 {
   background: var(--bg-sub);
   border-radius: var(--radius-sm);
   padding: 10px 12px;
+  min-width: 0; /* 不加的话长数字会把 grid 单元格撑破、溢出卡片 */
 }
 .stat .k {
   color: var(--fg-dim);
@@ -651,6 +674,9 @@ body[theme-mode='dark'] .heat i.l4 {
   font-weight: 650;
   font-variant-numeric: tabular-nums;
   margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ---------------------------------------------------------------- 其它 */

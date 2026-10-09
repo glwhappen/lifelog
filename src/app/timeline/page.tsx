@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
 import { Gate } from '@/components/Gate';
-import { useToast } from '@/components/Providers';
+import { useMe, useToast } from '@/components/Providers';
 import { callGet, hhmm, money } from '@/lib/client';
+import { kindMeta } from '@/lib/kinds';
 
 interface Entry {
   id: number;
@@ -43,6 +44,8 @@ export default function TimelinePage() {
 
 function Timeline() {
   const { show } = useToast();
+  const { user } = useMe();
+  const tz = user?.timezone;
   const [days, setDays] = useState(30);
   const [kind, setKind] = useState('');
   const [q, setQ] = useState('');
@@ -116,35 +119,51 @@ function Timeline() {
               <span className="grow" />
               <span className="sub">{items.length} 条</span>
             </div>
-            {items.map((e) => (
-              <div className="item" key={e.id}>
-                <span className="time">{hhmm(e.happened_at)}</span>
-                <div className="body">
-                  <div className="title">
-                    {e.title && <b style={{ fontWeight: 600 }}>{e.title}</b>}
-                    {e.title && e.content ? '　' : ''}
-                    {e.content && <span>{e.content}</span>}
-                    {!e.title && !e.content && <span className="faint">（无内容）</span>}
-                  </div>
-                  <div className="meta row wrap" style={{ gap: 5 }}>
-                    <span className="pill">{e.kind}</span>
-                    {e.category && <span className="pill">{e.category}</span>}
-                    {e.tags?.map((t) => (
-                      <span className="pill" key={t}>
-                        #{t}
+            {items.map((e) => {
+              const meta = kindMeta(e.kind);
+              const isMoney = e.kind === 'expense' || e.kind === 'income';
+              const hasText = Boolean(e.title || e.content);
+              const unit = e.category || e.meta?.unit || meta.unit || '';
+              return (
+                <div className="item" key={e.id}>
+                  <span className="time">{hhmm(e.happened_at, tz)}</span>
+                  <div className="body">
+                    <div className="title" style={{ whiteSpace: 'pre-wrap' }}>
+                      {e.title && <b style={{ fontWeight: 600 }}>{e.title}</b>}
+                      {e.title && e.content ? '　' : ''}
+                      {e.content && <span>{e.content}</span>}
+                    </div>
+                    <div className="meta row wrap" style={{ gap: 5 }}>
+                      <span className="pill">
+                        {meta.icon} {meta.label}
                       </span>
-                    ))}
-                    {e.source !== 'web' && <span className="faint">{e.source}</span>}
+                      {/* 数值型的 category 就是单位（已显示在右侧），不再重复成标签 */}
+                      {!meta.numeric && e.category && <span className="pill">{e.category}</span>}
+                      {e.tags?.map((t) => (
+                        <span className="pill" key={t}>
+                          #{t}
+                        </span>
+                      ))}
+                      {e.source !== 'web' && <span className="faint">{e.source}</span>}
+                    </div>
                   </div>
+                  {isMoney ? (
+                    <span className={`money ${e.kind === 'expense' ? 'out' : 'in'}`}>
+                      {e.kind === 'expense' ? '-' : '+'}
+                      {money(e.amount)}
+                    </span>
+                  ) : (
+                    e.amount !== null &&
+                    e.amount !== undefined && (
+                      <span className="mono" style={{ fontSize: 13, color: 'var(--fg-dim)' }}>
+                        {e.amount}
+                        {unit}
+                      </span>
+                    )
+                  )}
                 </div>
-                {e.amount !== null && e.amount !== undefined && (
-                  <span className={`money ${e.kind === 'expense' ? 'out' : e.kind === 'income' ? 'in' : ''}`}>
-                    {e.kind === 'expense' ? '-' : e.kind === 'income' ? '+' : ''}
-                    {e.kind === 'expense' || e.kind === 'income' ? money(e.amount) : `${e.amount}${e.category || ''}`}
-                  </span>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         ))
       )}

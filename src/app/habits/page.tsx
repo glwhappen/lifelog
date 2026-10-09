@@ -154,13 +154,8 @@ function Habits() {
                 </button>
               </div>
 
-              <div className="heat" title="最近打卡热力">
-                {cells.slice(-182).map((c) => {
-                  const ratio = s.habit.kind === 'count' && s.habit.target ? c.value / s.habit.target : Math.min(c.value, 1);
-                  const lvl = c.value <= 0 ? 0 : ratio >= 1 ? 4 : ratio >= 0.66 ? 3 : ratio >= 0.33 ? 2 : 1;
-                  return <i key={c.day} className={lvl ? `l${lvl}` : ''} title={`${c.day} ${c.value}${s.habit.unit || ''}`} />;
-                })}
-              </div>
+              {/* 按周对齐的热力图：每列 7 天，一眼看出「断在哪天」和星期规律 */}
+              <HeatGrid cells={cells.slice(-182)} unit={s.habit.unit} kind={s.habit.kind} target={s.habit.target} />
             </div>
           );
         })
@@ -205,4 +200,38 @@ function Habits() {
       </div>
     </>
   );
+}
+
+/** 按周对齐的打卡热力图（GitHub 风格：每列 7 天，从周一开始） */
+function HeatGrid({
+  cells,
+  kind,
+  target,
+  unit,
+}: {
+  cells: Array<{ day: string; value: number }>;
+  kind: string;
+  target: number | null;
+  unit: string | null;
+}) {
+  if (!cells.length) return null;
+  // 首日若不是周一，前面补空格，保证每一列都是同一个星期几
+  const first = new Date(`${cells[0].day}T12:00:00Z`).getUTCDay(); // 0=周日
+  const pad = (first + 6) % 7; // 周一=0
+  return (
+    <div className="heat" title="每列为一周，从周一到周日">
+      {Array.from({ length: pad }, (_, i) => (
+        <i key={`pad-${i}`} className="pad" />
+      ))}
+      {cells.map((c) => {
+        const ratio = kind === 'count' && target ? c.value / target : Math.min(c.value, 1);
+        const lvl = c.value <= 0 ? 0 : ratio >= 1 ? 4 : ratio >= 0.66 ? 3 : ratio >= 0.33 ? 2 : 1;
+        return <i key={c.day} className={lvl ? `l${lvl}` : ''} title={`${c.day}（${weekday(c.day)}） ${c.value}${unit || ''}`} />;
+      })}
+    </div>
+  );
+}
+
+function weekday(day: string): string {
+  return ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][new Date(`${day}T12:00:00Z`).getUTCDay()];
 }

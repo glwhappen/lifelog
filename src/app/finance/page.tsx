@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { AppShell } from '@/components/AppShell';
 import { Gate } from '@/components/Gate';
 import { useToast } from '@/components/Providers';
-import { call, callGet, money, todayLocal } from '@/lib/client';
+import { call, callGet, money, moneyShort, todayLocal } from '@/lib/client';
 
 interface Group {
   key: string;
@@ -140,7 +140,7 @@ function Finance() {
             style={{ width: 110 }}
             onKeyDown={(e) => e.key === 'Enter' && submit()}
           />
-          <input className="ipt" placeholder="分类，如 餐饮" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} style={{ width: 130 }} list="cat-hints" />
+          <input className="ipt" placeholder="分类" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))} style={{ width: 130 }} list="cat-hints" />
           <datalist id="cat-hints">
             {(sum?.byCategory ?? []).map((c) => (
               <option key={c.key} value={c.key} />
@@ -163,20 +163,20 @@ function Finance() {
           <div className="grid3" style={{ marginBottom: 12 }}>
             <div className="stat">
               <div className="k">支出</div>
-              <div className="v money out" style={{ fontSize: 17 }}>
-                {money(sum.expense)}
+              <div className="v money out" style={{ fontSize: 17 }} title={money(sum.expense)}>
+                {moneyShort(sum.expense)}
               </div>
             </div>
             <div className="stat">
               <div className="k">收入</div>
-              <div className="v money in" style={{ fontSize: 17 }}>
-                {money(sum.income)}
+              <div className="v money in" style={{ fontSize: 17 }} title={money(sum.income)}>
+                {moneyShort(sum.income)}
               </div>
             </div>
             <div className="stat">
               <div className="k">净额</div>
-              <div className="v" style={{ fontSize: 17, color: sum.net >= 0 ? 'var(--green)' : 'var(--red)' }}>
-                {money(sum.net)}
+              <div className="v" style={{ fontSize: 17, color: sum.net === 0 ? 'var(--fg)' : sum.net > 0 ? 'var(--green)' : 'var(--red)' }} title={money(sum.net)}>
+                {moneyShort(sum.net)}
               </div>
             </div>
           </div>
@@ -213,11 +213,19 @@ function Finance() {
             <div className="card-head">
               <h2>逐日趋势</h2>
             </div>
+            {sum.expense + sum.income > 0 && (
             <div className="bars">
               {sum.byDay.slice(-60).map((d) => (
-                <div key={d.day} className="b" style={{ height: `${(d.expense / maxDaily) * 100}%` }} title={`${d.day} 支出 ${money(d.expense)}`} />
+                <div
+                  key={d.day}
+                  className="b"
+                  style={{ height: `${(d.expense / maxDaily) * 100}%`, minHeight: d.expense > 0 ? 3 : 0 }}
+                  title={`${d.day} 支出 ${money(d.expense)}`}
+                />
               ))}
             </div>
+            )}
+            {sum.expense + sum.income === 0 && <div className="empty">这段时间还没有收支</div>}
             <div className="row faint small" style={{ marginTop: 6 }}>
               <span>{sum.byDay[0]?.day}</span>
               <span className="grow" />

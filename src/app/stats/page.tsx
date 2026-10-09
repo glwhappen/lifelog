@@ -5,6 +5,7 @@ import { AppShell } from '@/components/AppShell';
 import { Gate } from '@/components/Gate';
 import { useToast } from '@/components/Providers';
 import { callGet, money } from '@/lib/client';
+import { kindLabel } from '@/lib/kinds';
 
 interface Overview {
   from: string;
@@ -20,28 +21,6 @@ interface Overview {
   topTags: Array<{ tag: string; n: number }>;
   daily: Array<{ day: string; entries: number; done: number; expense: number; income: number }>;
 }
-
-const KIND_LABEL: Record<string, string> = {
-  done: '完成',
-  idea: '灵感',
-  note: '记录',
-  expense: '支出',
-  income: '收入',
-  mood: '心情',
-  energy: '精力',
-  sleep: '睡眠',
-  weight: '体重',
-  water: '饮水',
-  workout: '运动',
-  focus: '专注',
-  reading: '阅读',
-  gratitude: '感恩',
-  dream: '梦境',
-  social: '社交',
-  weather: '天气',
-  location: '位置',
-  metric: '指标',
-};
 
 export default function StatsPage() {
   return (
@@ -131,16 +110,22 @@ function Stats() {
             完成 {ov.tasks.done} · 新建 {ov.tasks.created}
           </span>
         </div>
+        {ov.entries > 0 && (
         <div className="bars">
           {ov.daily.slice(-90).map((d) => (
             <div
               key={d.day}
               className="b"
-              style={{ height: `${(d.entries / maxEntries) * 100}%` }}
+              style={{
+                height: `${(d.entries / maxEntries) * 100}%`,
+                minHeight: d.entries > 0 ? 3 : 0, // 空值是 0 高度，否则整排会连成一条「虚线」像坏掉
+              }}
               title={`${d.day}\n记录 ${d.entries} 条 · 完成 ${d.done} 项`}
             />
           ))}
         </div>
+        )}
+        {ov.entries === 0 && <div className="empty">这段时间还没有记录</div>}
       </div>
 
       <div className="grid-cards">
@@ -154,7 +139,7 @@ function Stats() {
             ov.byKind.map((k) => (
               <div key={k.kind} style={{ marginBottom: 8 }}>
                 <div className="row small">
-                  <span className="grow">{KIND_LABEL[k.kind] ?? k.kind}</span>
+                  <span className="grow">{kindLabel(k.kind)}</span>
                   <span className="mono faint">{k.n}</span>
                 </div>
                 <div style={{ height: 6, background: 'var(--bg-sub)', borderRadius: 999, marginTop: 4 }}>
@@ -201,7 +186,7 @@ function Stats() {
             <div className="item" key={m.kind + (m.unit ?? '')}>
               <div className="body">
                 <div className="title">
-                  {KIND_LABEL[m.kind] ?? m.kind} {m.unit ? <span className="faint small">({m.unit})</span> : null}
+                  {kindLabel(m.kind)} {m.unit ? <span className="faint small">({m.unit})</span> : null}
                 </div>
                 <div className="meta">
                   均值 {m.avg} · 区间 {m.min} ~ {m.max} · 共 {m.n} 次
@@ -230,7 +215,7 @@ function Stats() {
           </div>
           <div className="row" style={{ justifyContent: 'space-between' }}>
             <span className="muted small">净额</span>
-            <span className="money" style={{ color: ov.finance.net >= 0 ? 'var(--green)' : 'var(--red)' }}>
+            <span className="money" style={{ color: ov.finance.net === 0 ? 'var(--fg)' : ov.finance.net > 0 ? 'var(--green)' : 'var(--red)' }}>
               {money(ov.finance.net)}
             </span>
           </div>

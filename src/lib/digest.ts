@@ -2,28 +2,7 @@ import { eachDay, resolveRange } from './dates';
 import { getDay } from './day';
 import { overview } from './stats';
 import { listTasks } from './tasks';
-
-const KIND_LABEL: Record<string, string> = {
-  idea: '💡 灵感',
-  note: '📝 记录',
-  done: '✅ 完成',
-  expense: '💸 支出',
-  income: '💰 收入',
-  mood: '🙂 心情',
-  energy: '⚡ 精力',
-  sleep: '😴 睡眠',
-  weight: '⚖️ 体重',
-  water: '💧 饮水',
-  workout: '🏃 运动',
-  focus: '🎯 专注',
-  reading: '📖 阅读',
-  gratitude: '🙏 感恩',
-  dream: '🌙 梦境',
-  social: '👥 社交',
-  weather: '⛅ 天气',
-  location: '📍 位置',
-  metric: '📊 指标',
-};
+import { kindLabel, kindMeta } from './kinds';
 
 function money(n: number) {
   return `¥${Number(n).toFixed(2)}`;
@@ -77,7 +56,7 @@ export async function digest(
   }
   if (ov.metrics.length) {
     const ms = ov.metrics
-      .map((m) => `${KIND_LABEL[m.kind]?.replace(/^\S+\s/, '') ?? m.kind} 最近${m.last}${m.unit ?? ''}（均值${m.avg ?? '-'}，n=${m.n}）`)
+      .map((m) => `${kindLabel(m.kind)} 最近${m.last}${m.unit ?? ''}（均值${m.avg ?? '-'}，n=${m.n}）`)
       .join('；');
     lines.push(`- 指标：${ms}`);
   }
@@ -112,7 +91,7 @@ export async function digest(
 
     for (const [kind, items] of Object.entries(d.entries)) {
       if (!items.length) continue;
-      lines.push(`- ${KIND_LABEL[kind] ?? kind}`);
+      lines.push(`- ${kindMeta(kind).icon} ${kindLabel(kind)}`);
       for (const e of items.slice(0, 40)) lines.push(`  ${entryLine(e as any)}`);
     }
 
