@@ -1,0 +1,55 @@
+name: lifelog
+
+services:
+  life-db:
+    image: postgres:17-alpine
+    container_name: life-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: lifelog
+      POSTGRES_USER: lifelog
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-lifelog}
+      TZ: Asia/Shanghai
+    volumes:
+      - ./volumes/db:/var/lib/postgresql/data
+    # 数据库只在容器网络内可见，不暴露到宿主机
+    expose:
+      - '5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U lifelog -d lifelog']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # 稳定版：life.hsfp.cn
+  life:
+    build: .
+    image: lifelog:latest
+    container_name: life
+    restart: unless-stopped
+    env_file: .secrets/life.env
+    environment:
+      PORT: '4225'
+      HOSTNAME: 0.0.0.0
+      RUN_MIGRATIONS: '1'
+    ports:
+      - '172.17.0.1:4225:4225'
+    depends_on:
+      life-db:
+        condition: service_healthy
+
+  # 测试版：life_dev.hsfp.cn（与稳定版共用同一个库，先在这里验收）
+  life-dev:
+    image: lifelog:latest
+    container_name: life-dev
+    restart: unless-stopped
+    env_file: .secrets/life.env
+    environment:
+      PORT: '4226'
+      HOSTNAME: 0.0.0.0
+      RUN_MIGRATIONS: '0'
+    ports:
+      - '172.17.0.1:4226:4226'
+    depends_on:
+      life:
+        condition: service_healthy

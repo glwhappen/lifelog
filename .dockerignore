@@ -1,0 +1,16 @@
+node_modules
+.next
+.git
+.gitignore
+volumes
+.secrets
+.env
+.env.local
+*.log
+*.tsbuildinfo
+README.md
+AGENTS.md
+PROJECT.md
+TODO.md
+CURRENT.md
+CHANGELOG.md

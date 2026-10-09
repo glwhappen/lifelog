@@ -1,0 +1,33 @@
+{
+  "name": "lifelog",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LifeLog · 自托管个人生活记录平台：待办 / 完成 / 灵感 / 习惯 / 收支 / 位置 / 健康，内置 MCP 供大模型读写",
+  "license": "MIT",
+  "scripts": {
+    "dev": "next dev -p 4226",
+    "build": "next build",
+    "start": "next start -p 4225",
+    "typecheck": "tsc --noEmit",
+    "lint": "next lint",
+    "migrate": "node scripts/migrate.mjs"
+  },
+  "dependencies": {
+    "@douyinfe/semi-icons": "^2.103.0",
+    "@douyinfe/semi-ui": "^2.103.0",
+    "@modelcontextprotocol/sdk": "^1.30.1",
+    "jose": "^6.2.12",
+    "next": "^16.3.4",
+    "pg": "^8.23.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "zod": "^4.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.4",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "typescript": "5.9.3"
+  }
+}
