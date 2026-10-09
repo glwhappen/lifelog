@@ -3,6 +3,7 @@ import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import { AuthError } from '@/lib/auth';
 import { assertScope, resolveActor, type Actor } from '@/lib/apikey';
+import { rateLimit, readLimit, writeLimit } from '@/lib/ratelimit';
 import { toolByName, toolCatalog, tools } from '@/lib/tools';
 
 export const runtime = 'nodejs';
@@ -70,6 +71,12 @@ function buildServer(actor: Actor): Server {
       return fail(e instanceof Error ? e.message : String(e));
     }
 
+    // 写工具单独限流：跑飞的 agent 最容易死循环调写接口
+    if (tool.scope === 'write') {
+      const rl = rateLimit(`write:${actor.user.sub}`, writeLimit());
+      if (!rl.ok) return fail(`请求过于频繁（写操作上限 ${rl.limit}/分钟），请 ${rl.retryAfter} 秒后再试`);
+    }
+
     try {
       const data = await tool.handler({ user: actor.user, scopes: actor.scopes }, args);
       return ok(data ?? { ok: true });
@@ -95,6 +102,15 @@ async function handle(req: Request): Promise<Response> {
         id: null,
       },
       { status },
+    );
+  }
+
+  // 请求级限流（写工具还有一道更严的，在 CallTool 里）
+  const rl = rateLimit(`read:${actor.user.sub}`, readLimit());
+  if (!rl.ok) {
+    return Response.json(
+      { jsonrpc: '2.0', error: { code: -32029, message: `请求过于频繁，请 ${rl.retryAfter} 秒后再试` }, id: null },
+      { status: 429, headers: { 'Retry-After': String(rl.retryAfter) } },
     );
   }
 

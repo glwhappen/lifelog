@@ -5,6 +5,7 @@ import { AppShell } from '@/components/AppShell';
 import { Gate } from '@/components/Gate';
 import { useMe, useToast } from '@/components/Providers';
 import { callGet, call, todayLocal } from '@/lib/client';
+import { TaskEditor, type EditableTask } from '@/components/TaskEditor';
 
 interface Task {
   id: number;
@@ -41,6 +42,7 @@ function Tasks() {
   const { reload: reloadMe } = useMe();
   const [state, setState] = useState('pending');
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [edit, setEdit] = useState<EditableTask | null>(null);
   const [title, setTitle] = useState('');
   const [planned, setPlanned] = useState(todayLocal());
   const [busy, setBusy] = useState(false);
@@ -150,7 +152,16 @@ function Tasks() {
                     顺延
                   </button>
                 )}
-                <button className="btn ghost sm danger" disabled={busy} onClick={() => run(() => call('delete_task', { task: t.id }), '已删除')}>
+                <button className="btn ghost sm" disabled={busy} title="编辑" onClick={() => setEdit(t)}>
+                  ✏️
+                </button>
+                <button
+                  className="btn ghost sm danger"
+                  disabled={busy}
+                  onClick={() => {
+                    if (confirm(`删除待办「${t.title}」？`)) run(() => call('delete_task', { task: t.id }), '已删除');
+                  }}
+                >
                   删除
                 </button>
               </div>
@@ -158,6 +169,8 @@ function Tasks() {
           ))
         )}
       </div>
+
+      <TaskEditor task={edit} onClose={() => setEdit(null)} onChanged={load} />
     </>
   );
 }

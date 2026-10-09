@@ -1,9 +1,35 @@
 {
   "name": "lifelog",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "LifeLog · 自托管个人生活记录平台：待办 / 完成 / 灵感 / 习惯 / 收支 / 位置 / 健康，内置 MCP 供大模型读写",
+  "keywords": [
+    "lifelog",
+    "personal-data",
+    "journal",
+    "habit-tracker",
+    "mcp",
+    "model-context-protocol",
+    "self-hosted",
+    "nextjs",
+    "postgresql",
+    "oidc",
+    "ai-agent",
+    "quantified-self"
+  ],
   "license": "MIT",
+  "author": "glwhappen",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/glwhappen/lifelog.git"
+  },
+  "bugs": {
+    "url": "https://github.com/glwhappen/lifelog/issues"
+  },
+  "homepage": "https://github.com/glwhappen/lifelog#readme",
+  "engines": {
+    "node": ">=20.9"
+  },
   "scripts": {
     "dev": "next dev -p 4226",
     "build": "next build",

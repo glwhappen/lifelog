@@ -32,6 +32,35 @@ export interface ToolDef {
 const tz = (ctx: ToolCtx) => ctx.user.timezone || 'Asia/Shanghai';
 const uid = (ctx: ToolCtx) => ctx.user.sub;
 
+/**
+ * 任务在工具输出里的统一形状。
+ * 四类任务（今日/完成/逾期/收集箱）必须长得一样——字段名不一致会让
+ * 调用方（页面、大模型）静默拿不到数据，而这类错误编译器拒不住。
+ */
+function taskBrief(t: {
+  id: number;
+  title: string;
+  note: string | null;
+  status: string;
+  priority: number;
+  planned_day: string | null;
+  due_day: string | null;
+  done_at: string | null;
+  tags: string[];
+}) {
+  return {
+    id: t.id,
+    title: t.title,
+    note: t.note,
+    status: t.status,
+    priority: t.priority,
+    planned_day: t.planned_day,
+    due_day: t.due_day,
+    done_at: t.done_at,
+    tags: t.tags,
+  };
+}
+
 /* ---------------------------------------------------------------- 读工具 */
 
 function readTools(): ToolDef[] {
@@ -51,10 +80,14 @@ function readTools(): ToolDef[] {
         const d = await getDay(uid(ctx), tz(ctx), day);
         return {
           day: d.day,
-          pending: d.tasks.planned.map((t) => ({ id: t.id, title: t.title, priority: t.priority, due: t.due_day })),
-          done: d.tasks.done.map((t) => ({ id: t.id, title: t.title, at: t.done_at })),
-          overdue: d.tasks.overdue.map((t) => ({ id: t.id, title: t.title, planned_day: t.planned_day })),
-          inbox: d.tasks.inbox.map((t) => ({ id: t.id, title: t.title })),
+          isToday: d.isToday,
+          // 四类任务统一成同一个形状。
+          // （以前 pending 用 due、done 用 at、overdue 用 planned_day，
+          //   结果今日页的「截止日」「完成时间」因为字段对不上，一直没显示出来）
+          pending: d.tasks.planned.map(taskBrief),
+          done: d.tasks.done.map(taskBrief),
+          overdue: d.tasks.overdue.map(taskBrief),
+          inbox: d.tasks.inbox.map(taskBrief),
           counts: d.tasks.counts,
           entries: d.entries,
           habits: d.habits,

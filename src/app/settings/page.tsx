@@ -258,16 +258,28 @@ function Settings() {
         <p className="small muted" style={{ marginTop: 0 }}>
           导出为 Markdown（可以直接喂给大模型，或存进你的笔记库）。
         </p>
-        <div className="row wrap">
+        <div className="row wrap" style={{ marginBottom: 12 }}>
           {[
             ['7', '近 7 天'],
             ['30', '近 30 天'],
             ['365', '近一年'],
           ].map(([d, label]) => (
             <a key={d} className="btn sm" href={`/api/v1/daily_digest?days=${d}&max_days=${d}&format=markdown`} target="_blank" rel="noreferrer">
-              导出{label}
+              摘要{label}
             </a>
           ))}
+        </div>
+
+        <p className="small muted" style={{ margin: '0 0 8px' }}>
+          想整包带走？导出**全部原始数据**（JSON，表结构原样），随时可迁走或自己分析。
+        </p>
+        <div className="row wrap">
+          <a className="btn sm" href="/api/export" download>
+            全部数据（JSON）
+          </a>
+          <a className="btn sm" href="/api/export?days=365" download>
+            近一年（JSON）
+          </a>
         </div>
       </div>
 

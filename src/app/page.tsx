@@ -6,10 +6,13 @@ import { Gate } from '@/components/Gate';
 import { useMe, useToast } from '@/components/Providers';
 import { call, callGet, hhmm, money, moneyShort, todayLocal } from '@/lib/client';
 import { kindMeta } from '@/lib/kinds';
+import { EntryEditor, type EditableEntry } from '@/components/EntryEditor';
+import { TaskEditor, type EditableTask } from '@/components/TaskEditor';
 
 interface Entry {
   id: number;
   kind: string;
+  day: string;
   happened_at: string;
   title: string | null;
   content: string | null;
@@ -21,10 +24,13 @@ interface Entry {
 interface Task {
   id: number;
   title: string;
+  note: string | null;
+  status: string;
   priority: number;
   planned_day: string | null;
   due_day: string | null;
   done_at: string | null;
+  tags: string[];
 }
 interface DayData {
   day: string;
@@ -61,6 +67,8 @@ function Today() {
   const [note, setNote] = useState('');
   const [noteTouched, setNoteTouched] = useState(false);
   const [geoState, setGeoState] = useState<'idle' | 'asking' | 'done' | 'denied'>('idle');
+  const [editTask, setEditTask] = useState<EditableTask | null>(null);
+  const [editEntry, setEditEntry] = useState<EditableEntry | null>(null);
   const askedGeo = useRef(false);
 
   const load = useCallback(async () => {
@@ -295,6 +303,9 @@ function Today() {
               >
                 顺延
               </button>
+              <button className="btn ghost sm" disabled={busy} title="编辑" onClick={() => setEditTask(t)}>
+                ✏️
+              </button>
             </div>
           ))}
 
@@ -319,6 +330,9 @@ function Today() {
                   >
                     撤销
                   </button>
+                  <button className="btn ghost sm" disabled={busy} title="编辑" onClick={() => setEditTask(t)}>
+                    ✏️
+                  </button>
                 </div>
               ))}
             </>
@@ -341,6 +355,9 @@ function Today() {
                   </div>
                   <button className="btn ghost sm" disabled={busy} onClick={() => patch(() => call('postpone_task', { task: t.id }), '已顺延到今天')}>
                     今天做
+                  </button>
+                  <button className="btn ghost sm" disabled={busy} title="编辑" onClick={() => setEditTask(t)}>
+                    ✏️
                   </button>
                 </div>
               ))}
@@ -410,6 +427,9 @@ function Today() {
                 {e.kind === 'expense' ? '-' : '+'}
                 {money(e.amount)}
               </span>
+              <button className="btn ghost sm" title="编辑" onClick={() => setEditEntry(e)}>
+                ✏️
+              </button>
             </div>
           ))}
         </div>
@@ -505,6 +525,9 @@ function Today() {
           )}
         </div>
       )}
+
+      <TaskEditor task={editTask} onClose={() => setEditTask(null)} onChanged={load} />
+      <EntryEditor entry={editEntry} onClose={() => setEditEntry(null)} onChanged={load} />
     </>
   );
 }

@@ -20,6 +20,13 @@ export interface EntryInput {
 const COLS = `id, user_id, kind, day, happened_at, title, content, amount, currency,
   category, tags, source, meta, task_id, created_at, updated_at, deleted_at`;
 
+/**
+ * 全文搜索用的表达式。
+ * ⚠️ 必须与 migrations/002_fix_search_index.sql 里的 GIN 索引表达式**字面完全一致**，
+ * 否则索引不会被使用（只能全表扫描）。改这里就要加一个新迁移重建索引。
+ */
+export const SEARCH_EXPR = `(coalesce(title, '') || ' ' || coalesce(content, '') || ' ' || coalesce(category, ''))`;
+
 export async function createEntry(userId: string, tz: string, input: EntryInput): Promise<Entry> {
   const day = input.day ? normDay(input.day, tz) : todayIn(tz);
   const happenedAt = input.happenedAt ?? (input.at ? atTimeOfDay(day, input.at, tz) : undefined);
@@ -81,7 +88,7 @@ export async function queryEntries(userId: string, tz: string, query: EntryQuery
   }
   if (query.q) {
     args.push(`%${query.q}%`);
-    where.push(`(coalesce(title,'') || ' ' || coalesce(content,'') || ' ' || coalesce(category,'')) ilike $${args.length}`);
+    where.push(`${SEARCH_EXPR} ilike $${args.length}`);
   }
 
   const limit = Math.min(Math.max(Number(query.limit) || 100, 1), 1000);

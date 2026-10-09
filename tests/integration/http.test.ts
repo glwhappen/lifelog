@@ -3,11 +3,13 @@
  * 直接调用 route handler，不起服务器、不模拟 cookie —— 纯 API Key 路径。
  */
 import { describe, expect, it } from 'vitest';
-import { hasDb, useTestDb, TEST_SUB } from '../helpers/db';
+import { hasDb, useTestDb, TEST_SUB, daysAgo } from '../helpers/db';
 import { createApiKey, listApiKeys, revokeApiKey, verifyApiKey } from '@/lib/apikey';
 import { createEntry } from '@/lib/entries';
-import { createTask } from '@/lib/tasks';
+import { completeTask, createTask } from '@/lib/tasks';
 import { GET as v1GET, POST as v1POST } from '@/app/api/v1/[...path]/route';
+import { GET as exportGET } from '@/app/api/export/route';
+import { resetRateLimits } from '@/lib/ratelimit';
 import { POST as mcpPOST } from '@/app/api/mcp/route';
 import { todayIn } from '@/lib/dates';
 
@@ -191,10 +193,36 @@ describe.skipIf(!hasDb)('REST /api/v1', () => {
     // 而 src/lib/day.ts 内部的 getDay 返回 { tasks: { planned, done, ... } }。
     // 两者刻意不同（对模型更友好的少一层嵌套），这个断言就是防止它悄悄漂移。
     expect(Object.keys(d).sort()).toEqual(
-      ['counts', 'day', 'done', 'entries', 'finance', 'habits', 'inbox', 'overdue', 'pending', 'places', 'summary'].sort(),
+      ['counts', 'day', 'done', 'entries', 'finance', 'habits', 'inbox', 'isToday', 'overdue', 'pending', 'places', 'summary'].sort(),
     );
     expect(d.counts).toHaveProperty('planned');
     expect(d.counts).toHaveProperty('inbox');
+    expect(d.isToday).toBe(true);
+  });
+
+  it('回归：四类任务（pending/done/overdue/inbox）的字段形状必须完全一致', async () => {
+    // 曾经 pending 用 due、done 用 at、overdue 用 planned_day、inbox 什么都没有，
+    // 结果今日页的「截止日」和「完成时间」因为字段名对不上，一直静默不显示。
+    const { key } = await createApiKey(TEST_SUB, 'r', ['read', 'write']);
+    await createTask(TEST_SUB, TZ, { title: '今天的', planned_day: '今天', due_day: '明天', tags: ['x'] });
+    await createTask(TEST_SUB, TZ, { title: '逾期的', planned_day: daysAgo(2) });
+    await createTask(TEST_SUB, TZ, { title: '收集箱', planned_day: null });
+    const done = await createTask(TEST_SUB, TZ, { title: '完成的', planned_day: '今天' });
+    await completeTask(TEST_SUB, TZ, done.id);
+
+    const res = await v1('GET', ['get_day'], { key });
+    const d = (await res.json()).data;
+    const expected = ['done_at', 'id', 'note', 'planned_day', 'priority', 'status', 'tags', 'title', 'due_day'].sort();
+    for (const list of [d.pending, d.done, d.overdue, d.inbox]) {
+      expect(list.length).toBeGreaterThan(0);
+      for (const t of list) expect(Object.keys(t).sort()).toEqual(expected);
+    }
+    // 具体值也要对得上
+    expect(d.pending[0].due_day).toBe(daysAgo(-1));
+    expect(d.pending[0].tags).toEqual(['x']);
+    expect(d.overdue[0].planned_day).toBe(daysAgo(2));
+    expect(d.done[0].done_at).toBeTruthy();
+    expect(d.done[0].status).toBe('done');
   });
 
   it('get_day 的日期入参支持口语', async () => {
@@ -349,5 +377,121 @@ describe.skipIf(!hasDb)('工具层与页面共享的字段契约', () => {
     expect(d.sub).toBe(TEST_SUB);
     expect(d.timezone).toBe(TZ);
     expect(d.scopes).toContain('read');
+  });
+});
+
+describe.skipIf(!hasDb)('限流：防止跑飞的 agent 灌爆数据库', () => {
+  useTestDb();
+
+  it('写操作超过上限返回 429 + Retry-After', async () => {
+    resetRateLimits();
+    process.env.RATE_LIMIT_WRITE_PER_MIN = '2';
+    try {
+      const { key } = await createApiKey(TEST_SUB, 'rl', ['read', 'write']);
+      const body = { title: '限流测试' };
+      expect((await v1('POST', ['add_task'], { key, body })).status).toBe(200);
+      expect((await v1('POST', ['add_task'], { key, body })).status).toBe(200);
+      const third = await v1('POST', ['add_task'], { key, body });
+      expect(third.status).toBe(429);
+      expect(third.headers.get('retry-after')).toBeTruthy();
+      expect((await third.json()).error).toContain('频繁');
+    } finally {
+      delete process.env.RATE_LIMIT_WRITE_PER_MIN;
+      resetRateLimits();
+    }
+  });
+
+  it('读操作不受写限额影响（分开计数）', async () => {
+    resetRateLimits();
+    process.env.RATE_LIMIT_WRITE_PER_MIN = '1';
+    try {
+      const { key } = await createApiKey(TEST_SUB, 'rl2', ['read', 'write']);
+      await v1('POST', ['add_task'], { key, body: { title: 'a' } });
+      for (let i = 0; i < 5; i++) {
+        expect((await v1('GET', ['get_day'], { key })).status).toBe(200);
+      }
+    } finally {
+      delete process.env.RATE_LIMIT_WRITE_PER_MIN;
+      resetRateLimits();
+    }
+  });
+
+  it('MCP 写工具同样受限流保护', async () => {
+    resetRateLimits();
+    process.env.RATE_LIMIT_WRITE_PER_MIN = '1';
+    try {
+      const { key } = await createApiKey(TEST_SUB, 'rlm', ['read', 'write']);
+      const call = () =>
+        mcp(key, {
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'tools/call',
+          params: { name: 'add_task', arguments: { title: 'mcp 限流' } },
+        });
+      expect((await call()).body.result.isError).toBeUndefined();
+      const second = await call();
+      expect(second.body.result.isError).toBe(true);
+      expect(second.body.result.content[0].text).toContain('频繁');
+    } finally {
+      delete process.env.RATE_LIMIT_WRITE_PER_MIN;
+      resetRateLimits();
+    }
+  });
+});
+
+describe.skipIf(!hasDb)('全量数据导出（数据主权）', () => {
+  useTestDb();
+
+  it('导出包含全部业务表，且格式自描述', async () => {
+    const { key } = await createApiKey(TEST_SUB, 'exp', ['read', 'write']);
+    await createTask(TEST_SUB, TZ, { title: '导出的任务', planned_day: '今天' });
+    await createEntry(TEST_SUB, TZ, { kind: 'expense', amount: 12.5, category: '餐饮' });
+
+    const res = await exportGET(
+      new Request('http://life.test/api/export', { headers: { authorization: `Bearer ${key}` } }),
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-disposition')).toContain('attachment');
+    const data = await res.json();
+
+    expect(data.format).toBe('lifelog-export');
+    expect(data.version).toBe(1);
+    expect(data.user.sub).toBe(TEST_SUB);
+    expect(Object.keys(data.tables).sort()).toEqual(
+      ['daily_summaries', 'entries', 'habit_logs', 'habits', 'locations', 'tasks'].sort(),
+    );
+    expect(data.tables.tasks).toHaveLength(1);
+    expect(data.tables.entries).toHaveLength(1);
+    expect(Number(data.tables.entries[0].amount)).toBe(12.5);
+    expect(data.totals.entries).toBe(1);
+    // 绝不能把密钥哈希导出去
+    expect(JSON.stringify(data)).not.toContain('key_sha256');
+  });
+
+  it('days 参数限制导出范围', async () => {
+    const { key } = await createApiKey(TEST_SUB, 'exp2', ['read']);
+    await createEntry(TEST_SUB, TZ, { kind: 'note', content: '今天', day: daysAgo(0) });
+    await createEntry(TEST_SUB, TZ, { kind: 'note', content: '很久以前', day: daysAgo(400) });
+
+    const res = await exportGET(
+      new Request('http://life.test/api/export?days=30', { headers: { authorization: `Bearer ${key}` } }),
+    );
+    const data = await res.json();
+    expect(data.tables.entries).toHaveLength(1);
+    expect(data.tables.entries[0].content).toBe('今天');
+    expect(data.totals.entries).toBe(2); // totals 是历史总量，与过滤范围无关
+  });
+
+  it('未授权不能导出', async () => {
+    const res = await exportGET(new Request('http://life.test/api/export'));
+    expect(res.status).toBe(401);
+  });
+
+  it('只读 key 也可以导出（导出属于读权限）', async () => {
+    const { key } = await createApiKey(TEST_SUB, 'exp3', ['read']);
+    const res = await exportGET(
+      new Request('http://life.test/api/export', { headers: { authorization: `Bearer ${key}` } }),
+    );
+    expect(res.status).toBe(200);
   });
 });

@@ -13,9 +13,31 @@ let pool: Pool | null = null;
 export function db(): Pool {
   if (!pool) {
     if (!env.databaseUrl) throw new Error('DATABASE_URL 未配置');
-    pool = new Pool({ connectionString: env.databaseUrl, max: 8 });
+    pool = new Pool({
+      connectionString: env.databaseUrl,
+      max: 8,
+      idleTimeoutMillis: 30_000,
+      connectionTimeoutMillis: 8_000,
+      // 防一条慢查询把连接池占死；Postgres 会在服务端中断
+      statement_timeout: 20_000,
+      application_name: 'lifelog',
+    });
+    // 必须监听：pg 的空闲连接如果出错，未处理的 'error' 事件会直接让进程挂掉
+    // （典型触发场景：数据库重启 / 网络闪断 / 连接被服务端踢掉）
+    pool.on('error', (err) => {
+      console.error('[db] 空闲连接出错（已忽略，池会自动重连）:', err.message);
+    });
   }
   return pool;
+}
+
+/** 优雅关闭（脚本/测试收尾用；Next 进程内一般由进程退出顺带处理） */
+export async function closeDb(): Promise<void> {
+  if (pool) {
+    const p = pool;
+    pool = null;
+    await p.end().catch(() => {});
+  }
 }
 
 export async function q<T = any>(sql: string, params: unknown[] = []): Promise<T[]> {

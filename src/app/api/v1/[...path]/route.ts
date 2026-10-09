@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { AuthError } from '@/lib/auth';
 import { assertScope, resolveActor } from '@/lib/apikey';
+import { rateLimit, readLimit, writeLimit } from '@/lib/ratelimit';
 import { toolByName, tools } from '@/lib/tools';
 
 export const runtime = 'nodejs';
@@ -12,13 +13,21 @@ export const dynamic = 'force-dynamic';
  *   GET  /api/v1/<tool>?k=v         调用只读工具
  *   POST /api/v1/<tool>  {json}     调用任意工具
  * 鉴权：网页会话 Cookie，或 Authorization: Bearer ll-xxx
+ * 限流：读/写分开计数（防止跑飞的 agent 把库灌爆）
  */
 
 function err(e: unknown) {
   if (e instanceof AuthError) return NextResponse.json({ ok: false, error: e.message }, { status: e.status });
   const msg = e instanceof Error ? e.message : String(e);
   console.error('[api/v1]', msg);
-  return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+  return NextResponse.json({ ok: false, error: '服务内部错误' }, { status: 500 });
+}
+
+function tooMany(retryAfter: number, limit: number) {
+  return NextResponse.json(
+    { ok: false, error: `请求过于频繁（上限 ${limit}/分钟），请 ${retryAfter} 秒后再试` },
+    { status: 429, headers: { 'Retry-After': String(retryAfter) } },
+  );
 }
 
 export async function GET(req: Request, { params }: { params: Promise<{ path?: string[] }> }) {
@@ -41,6 +50,9 @@ export async function GET(req: Request, { params }: { params: Promise<{ path?: s
 
     const actor = await resolveActor(req);
     assertScope(actor, 'read');
+    const rl = rateLimit(`read:${actor.user.sub}`, readLimit());
+    if (!rl.ok) return tooMany(rl.retryAfter, rl.limit);
+
     const url = new URL(req.url);
     const args: Record<string, unknown> = {};
     for (const [k, v] of url.searchParams) {
@@ -77,6 +89,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ path?: 
     const actor = await resolveActor(req);
     assertScope(actor, 'read');
     assertScope(actor, tool.scope);
+    const rl =
+      tool.scope === 'write'
+        ? rateLimit(`write:${actor.user.sub}`, writeLimit())
+        : rateLimit(`read:${actor.user.sub}`, readLimit());
+    if (!rl.ok) return tooMany(rl.retryAfter, rl.limit);
 
     let body: any = {};
     try {

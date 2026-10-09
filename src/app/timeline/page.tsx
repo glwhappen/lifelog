@@ -6,6 +6,7 @@ import { Gate } from '@/components/Gate';
 import { useMe, useToast } from '@/components/Providers';
 import { callGet, hhmm, money } from '@/lib/client';
 import { kindMeta } from '@/lib/kinds';
+import { EntryEditor, type EditableEntry } from '@/components/EntryEditor';
 
 interface Entry {
   id: number;
@@ -51,6 +52,7 @@ function Timeline() {
   const [q, setQ] = useState('');
   const [entries, setEntries] = useState<Entry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [edit, setEdit] = useState<EditableEntry | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -161,12 +163,17 @@ function Timeline() {
                       </span>
                     )
                   )}
+                  <button className="btn ghost sm" title="编辑" onClick={() => setEdit(e)}>
+                    ✏️
+                  </button>
                 </div>
               );
             })}
           </div>
         ))
       )}
+
+      <EntryEditor entry={edit} onClose={() => setEdit(null)} onChanged={load} />
     </>
   );
 }

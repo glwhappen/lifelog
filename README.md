@@ -28,6 +28,7 @@ LifeLog 把所有值得记的东西收进**一张统一流水表**，再用 **MC
 
 ## 目录
 
+- [界面](#界面)
 - [能记什么](#能记什么)
 - [AI 怎么用](#ai-怎么用)
 - [快速开始](#快速开始)
@@ -37,9 +38,24 @@ LifeLog 把所有值得记的东西收进**一张统一流水表**，再用 **MC
 - [REST API](#rest-api)
 - [数据模型](#数据模型)
 - [开发](#开发)
+- [安全](#安全)
 - [部署](#部署)
 - [路线图](#路线图)
 - [许可](#许可)
+
+---
+
+## 界面
+
+| 今日 | 打卡 |
+| --- | --- |
+| ![今日](docs/screenshot-today.png) | ![打卡](docs/screenshot-habits.png) |
+
+| 统计 | AI 接入（MCP） |
+| --- | --- |
+| ![统计](docs/screenshot-stats.png) | ![MCP](docs/screenshot-mcp.png) |
+
+<p align="center"><img src="docs/screenshot-mobile.png" width="300" alt="手机端"></p>
 
 ---
 
@@ -264,6 +280,9 @@ curl -X POST https://life.example.com/api/v1/log_expense \
 
 # 导出 Markdown（直接喂模型 / 存笔记库）
 curl "https://life.example.com/api/v1/daily_digest?days=7&format=markdown" -H "Authorization: Bearer ll-xxx"
+
+# 导出全部原始数据（JSON，数据主权：随时可以整包带走）
+curl -OJ "https://life.example.com/api/export" -H "Authorization: Bearer ll-xxx"
 ```
 
 工具名与 MCP 完全一致——**一处定义，三处可用**（见 `src/lib/tools.ts`）。
@@ -363,6 +382,25 @@ docker/entrypoint.sh 容器入口（先迁移再启动）
 
 ---
 
+## 安全
+
+个人生活数据是自己最私密的东西之一，所以这里都做了显式处理：
+
+| 面向 | 做法 |
+| --- | --- |
+| 身份 | 不建用户表、不存密码，只信 IdP 返回的 `sub`；会话是 HS256 签名的 httpOnly Cookie（SameSite=Lax） |
+| API Key | 只存 sha256（明文仅签发时返回一次），支持 `read` / `write` 分级与随时吊销，校验用常量时间比较 |
+| CSRF | 带 Cookie 的写请求校验 `Origin`（Bearer 调用天然免疫）；中间件层统一拦截，不依赖各处自觉 |
+| 越权 | 所有读写都带服务端确认的 `user_id`，绝不信任入参里的身份 |
+| 滥用 | 读写分开限流（默认 600/分钟、120/分钟），防止跑飞的 AI 循环灌爆数据库 |
+| 响应头 | `frame-ancestors 'none'` / `X-Frame-Options: DENY`（防点击劫持）、`nosniff`、`Permissions-Policy` 收掉用不到的能力 |
+| 泄露 | 错误只回可读信息，内部堆栈只进服务端日志；`robots: noindex` 不被搜索引擎收录 |
+| 注入 | 全部走参数化查询；搜索用 GIN + pg_trgm 索引 |
+
+> ⚠️ 内置限流是**进程内存**实现，多实例部署时每个实例各算各的。要做集群级限流请接 Redis。
+
+---
+
 ## 部署
 
 ```bash
@@ -397,6 +435,9 @@ docker compose up -d life                                          # 没问题�
 - [x] MCP 服务端 + REST + API Key + Markdown 导出
 - [ ] AI 对话：语音说一句 → 自动记录
 - [ ] 截图 / 文件上传 → AI 识别后自动记录（如账单截图→支出）
+- [x] 流水/待办的编辑与删除（页面上就能改错字）
+- [x] 全量数据导出（JSON，数据主权）
+- [x] 可添加到主屏幕（PWA manifest + 图标）
 - [ ] 轨迹地图回放（GPX 已支持导入）
 - [ ] 每日/每周提醒推送（Webhook）
 - [ ] 语义检索（embedding）
