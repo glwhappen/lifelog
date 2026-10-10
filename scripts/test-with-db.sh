@@ -37,7 +37,9 @@ for _ in $(seq 1 60); do
   sleep 1
 done
 if ! docker exec "$NAME" pg_isready -U lifelog -d lifelog >/dev/null 2>&1; then
-  echo "[test] 数据库没起来，退出" >&2
+  echo "[test] 数据库 60 秒内没起来，容器状态与日志：" >&2
+  docker ps -a --filter "name=$NAME" >&2
+  docker logs "$NAME" 2>&1 | tail -20 >&2
   exit 1
 fi
 

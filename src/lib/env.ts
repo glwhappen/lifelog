@@ -13,8 +13,13 @@ export const env = {
   deepseekKey: process.env.DEEPSEEK_API_KEY || '',
   deepseekBase: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com',
   deepseekModel: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
-  /** 单用户每日 AI 调用上限（防止误用烧钱） */
-  aiDailyLimit: Number(process.env.AI_DAILY_LIMIT || 100),
+  /** 速记框的 AI 解析开关（默认：有 key 就开） */
+  aiCaptureEnabled: process.env.AI_CAPTURE_ENABLED ? process.env.AI_CAPTURE_ENABLED === '1' : true,
+  aiTimeoutMs: Number(process.env.AI_TIMEOUT_MS || 45_000),
+  /** 速记框每分钟最多几次 AI 解析（每次都要花钱，必须限） */
+  aiRatePerMin: Number(process.env.AI_RATE_PER_MIN || 20),
+  /** 单用户每日 AI 调用上限（防误用烧钱） */
+  aiDailyLimit: Number(process.env.AI_DAILY_LIMIT || 300),
 };
 
 export const API_KEY_PREFIX = 'll-';

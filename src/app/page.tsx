@@ -539,54 +539,158 @@ function shift(day: string, delta: number): string {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
-/* ---------------------------------------------------------------- 速记 */
+/* ---------------------------------------------------------------- 速记（AI 解析） */
+
+interface CaptureOutcome {
+  reply: string;
+  actions: Array<{ tool: string; args: Record<string, unknown>; label: string; ok: boolean; error?: string }>;
+  pending: Array<{ tool: string; args: Record<string, unknown>; label: string }>;
+  undo: Array<{ tool: string; args: Record<string, unknown> }>;
+  usedAi: boolean;
+}
 
 function QuickCapture({ onDone }: { onDone: () => Promise<void> }) {
   const { show } = useToast();
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
+  const [outcome, setOutcome] = useState<CaptureOutcome | null>(null);
+  const [confirming, setConfirming] = useState(false);
 
   const send = async (raw?: string) => {
     const t = (raw ?? text).trim();
     if (!t) return;
     setBusy(true);
+    setOutcome(null);
     try {
-      const r: any = await call('quick_capture', { text: t });
-      const label: Record<string, string> = {
-        expense: '已记为支出',
-        income: '已记为收入',
-        task: '已加入待办',
-        idea: '已记灵感',
-        done: '已记完成',
-        note: '已记录',
-      };
-      show(`${label[r?.routed] ?? '已记录'}：${t.slice(0, 20)}`);
+      const res = await fetch('/api/ai/capture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: t }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json?.ok) throw new Error(json?.error || '解析失败');
+      setOutcome(json.data);
       setText('');
       await onDone();
     } catch (e: any) {
-      show(e.error || '记录失败', 'err');
+      show(e.message || '记录失败', 'err');
     } finally {
       setBusy(false);
     }
   };
 
+  const undo = async () => {
+    if (!outcome?.undo.length) return;
+    setBusy(true);
+    try {
+      // 逆操作已按正确顺序排好，顺次执行即可
+      for (const op of outcome.undo) {
+        await call(op.tool as string, op.args as any);
+      }
+      show('已撤销');
+      setOutcome(null);
+      await onDone();
+    } catch (e: any) {
+      show(e.error || '撤销失败', 'err');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const confirmPending = async () => {
+    if (!outcome?.pending.length) return;
+    setConfirming(true);
+    try {
+      for (const op of outcome.pending) {
+        await call(op.tool, op.args as any);
+      }
+      show('已执行');
+      setOutcome(null);
+      await onDone();
+    } catch (e: any) {
+      show(e.error || '执行失败', 'err');
+    } finally {
+      setConfirming(false);
+    }
+  };
+
+  const done = outcome?.actions.filter((a) => a.ok) ?? [];
+
   return (
     <div className="capture">
       <textarea
-        placeholder="想到什么就写什么：午饭 35 / 跑步 30 分钟 / 明天要交周报 / 灵感: 做个…"
+        placeholder="直接说人话：记录一下明天要给车做保养 / 午饭 35 / 把买牛奶挪到明天 / 删掉刚才那条"
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) send();
         }}
+        disabled={busy}
       />
       <div className="bar">
-        <span className="faint small">自动分流到 待办 / 收支 / 灵感 / 指标</span>
+        <span className="faint small">
+          {busy ? '✨ AI 正在理解…' : 'AI 解析：记录 / 修改 / 删除都能听懂'}
+        </span>
         <span className="grow" />
         <button className="btn primary sm" disabled={busy || !text.trim()} onClick={() => send()}>
-          记一笔
+          {busy ? '理解中…' : '✨ 记一笔'}
         </button>
       </div>
+
+      {outcome && (
+        <div style={{ borderTop: '1px solid var(--line)', marginTop: 10, paddingTop: 10 }}>
+          <div className="row" style={{ alignItems: 'flex-start', gap: 8 }}>
+            <span style={{ fontSize: 15 }}>{outcome.usedAi ? '✨' : '📌'}</span>
+            <div className="body small" style={{ flex: 1 }}>
+              {outcome.reply || '（没有可执行的动作）'}
+            </div>
+            {outcome.undo.length > 0 && (
+              <button className="btn ghost sm" disabled={busy} onClick={undo}>
+                撤销
+              </button>
+            )}
+          </div>
+
+          {done.length > 0 && (
+            <div className="row wrap" style={{ gap: 5, marginTop: 8 }}>
+              {done.map((a, i) => (
+                <span className="pill green" key={i}>
+                  {a.label}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {outcome.actions.some((a) => !a.ok) && (
+            <div className="row wrap" style={{ gap: 5, marginTop: 6 }}>
+              {outcome.actions
+                .filter((a) => !a.ok)
+                .map((a, i) => (
+                  <span className="pill red" key={i}>
+                    {a.label}：{a.error}
+                  </span>
+                ))}
+            </div>
+          )}
+
+          {outcome.pending.length > 0 && (
+            <div
+              className="row wrap"
+              style={{ gap: 8, marginTop: 10, background: 'var(--amber-soft)', borderRadius: 10, padding: '9px 11px' }}
+            >
+              <span className="small" style={{ flex: 1 }}>
+                ⚠️ 要执行删除：{outcome.pending.map((p) => p.label).join('；')}
+              </span>
+              <button className="btn sm" disabled={confirming} onClick={() => setOutcome(null)}>
+                取消
+              </button>
+              <button className="btn primary sm" disabled={confirming} onClick={confirmPending}>
+                {confirming ? '执行中…' : '确认'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

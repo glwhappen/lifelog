@@ -35,6 +35,14 @@
 12. **任务在工具输出里的形状只有一个**：`tools.ts` 的 `taskBrief()`。
     pending/done/overdue/inbox 四类必须长得一样 —— 字段名不一致会让页面静默拿不到数据。
 13. 服务端不要回传内部异常信息（只进日志），前端错误用 `error.tsx` 兜。
+14. **调模型必须关思考**：`thinking: { type: 'disabled' }`。
+    不关的话 reasoning 会吃光 token 预算，`content` 直接是空的 ——
+    功能看起来像没生效，还不报错。实测差 9.5 倍 token。
+15. **AI 速记的破坏性操作只登记、不执行**（`capture.ts` 的 `DESTRUCTIVE_TOOLS`），
+    等用户在界面上确认。撤销栈里的更新类操作必须在**执行前**取快照，
+    否则撤销会把新值当旧值（踩过一次）。
+16. 动 AI 相关代码前先看 `tests/integration/ai-capture.test.ts`：
+    模型调用一律 mock，**测试绝不能真的花钱调模型**。
 
 ## 常用命令
 

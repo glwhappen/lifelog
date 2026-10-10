@@ -9,3 +9,9 @@ process.env.DEFAULT_TIMEZONE ||= 'Asia/Shanghai';
 if (process.env.TEST_DATABASE_URL) {
   process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
 }
+
+// AI 相关的默认值：让 aiEnabled() 为真，但 base 指向一个不可能连通的地址，
+// 真正要发请求的用例会 mock 掉 fetch —— 测试永远不会真的花钱调模型。
+process.env.DEEPSEEK_API_KEY ||= 'test-key';
+process.env.DEEPSEEK_BASE_URL ||= 'https://ai.invalid/v1';
+process.env.DEEPSEEK_MODEL ||= 'test-model';
