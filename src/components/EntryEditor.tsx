@@ -5,6 +5,7 @@ import { Sheet, Field } from './Sheet';
 import { useToast } from './Providers';
 import { call } from '@/lib/client';
 import { kindMeta } from '@/lib/kinds';
+import { KindIcon, Trash2 } from './icons';
 
 export interface EditableEntry {
   id: number;
@@ -103,14 +104,16 @@ export function EntryEditor({
   return (
     <Sheet
       open
-      title={`编辑 · ${meta.icon} ${meta.label}`}
+      title={`编辑 · ${meta.label}`}
+      icon={<KindIcon kind={entry.kind} size={16} />}
       onClose={onClose}
       footer={
         <>
           <button className="btn primary grow" disabled={busy} onClick={save}>
             保存
           </button>
-          <button className="btn danger" disabled={busy} onClick={remove}>
+          <button className="btn danger row" style={{ gap: 5 }} disabled={busy} onClick={remove}>
+            <Trash2 size={14} />
             删除
           </button>
         </>

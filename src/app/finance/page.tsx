@@ -5,6 +5,7 @@ import { AppShell } from '@/components/AppShell';
 import { Gate } from '@/components/Gate';
 import { useToast } from '@/components/Providers';
 import { call, callGet, money, moneyShort, todayLocal } from '@/lib/client';
+import { ChartLine, Receipt, TrendingDown, TrendingUp } from '@/components/icons';
 
 interface Group {
   key: string;
@@ -119,7 +120,9 @@ function Finance() {
 
       <div className="card">
         <div className="card-head">
-          <h2>记一笔</h2>
+          <h2>
+            <Receipt size={16} /> 记一笔
+          </h2>
           <span className="grow" />
           <div className="row" style={{ gap: 4 }}>
             <button className={`pill ${form.kind === 'expense' ? 'red' : ''}`} style={{ cursor: 'pointer', border: 0 }} onClick={() => setForm((f) => ({ ...f, kind: 'expense' }))}>
@@ -183,7 +186,9 @@ function Finance() {
 
           <div className="card">
             <div className="card-head">
-              <h2>支出分类</h2>
+              <h2>
+              <ChartLine size={16} /> 支出分类
+            </h2>
               <span className="grow" />
               <span className="sub">{sum.from} ~ {sum.to}</span>
             </div>
@@ -211,7 +216,9 @@ function Finance() {
 
           <div className="card">
             <div className="card-head">
-              <h2>逐日趋势</h2>
+              <h2>
+                <TrendingDown size={16} /> 逐日趋势
+              </h2>
             </div>
             {sum.expense + sum.income > 0 && (
             <div className="bars">
@@ -236,7 +243,9 @@ function Finance() {
           {sum.topExpenses.length > 0 && (
             <div className="card">
               <div className="card-head">
-                <h2>最大支出</h2>
+                <h2>
+                <TrendingUp size={16} /> 最大支出
+              </h2>
               </div>
               {sum.topExpenses.map((e) => (
                 <div className="item" key={e.id}>
@@ -255,7 +264,9 @@ function Finance() {
 
       <div className="card">
         <div className="card-head">
-          <h2>最近流水</h2>
+          <h2>
+            <Receipt size={16} /> 最近流水
+          </h2>
         </div>
         {recent.length === 0 ? (
           <div className="empty">最近 14 天没有收支记录</div>

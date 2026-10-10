@@ -79,6 +79,31 @@ select {
   color: inherit;
 }
 
+/* 图标统一走 currentColor，跟着主题与按钮状态变色 */
+svg {
+  flex: 0 0 auto;
+}
+.inline-ic {
+  display: inline-flex;
+  vertical-align: -0.16em;
+  margin-right: 4px;
+}
+.btn.icon-btn {
+  padding: 6px 8px;
+  display: inline-flex;
+  align-items: center;
+}
+.card-head h2,
+.card-head h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.card-head h2 svg,
+.card-head h3 svg {
+  color: var(--fg-dim);
+}
+
 a {
   color: var(--accent);
   text-decoration: none;
@@ -113,15 +138,54 @@ a {
   align-items: center;
   gap: 7px;
 }
-.topbar .brand .logo {
-  width: 22px;
-  height: 22px;
-  border-radius: 7px;
+/* 品牌标记：侧栏与顶栏共用同一套样式 */
+.logo {
+  width: 23px;
+  height: 23px;
+  border-radius: 8px;
   background: linear-gradient(135deg, var(--accent), var(--purple));
   display: grid;
   place-items: center;
   color: #fff;
-  font-size: 13px;
+  flex: 0 0 auto;
+}
+
+/* 顶栏：桌面显示「页面图标」，手机没有侧栏所以显示品牌标记 */
+.topbar .brand .brand-logo {
+  display: none;
+}
+.topbar .brand .page-ic {
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+@media (max-width: 899px) {
+  .topbar .brand .brand-logo {
+    display: grid;
+  }
+  .topbar .brand .page-ic {
+    display: none;
+  }
+}
+
+/* 习惯卡：桌面端控件与热力图同行 */
+.habit-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+@media (min-width: 760px) {
+  .habit-body {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+  }
 }
 .topbar .spacer {
   flex: 1 1 auto;
@@ -576,6 +640,7 @@ textarea.ipt {
   display: flex;
   align-items: center;
   gap: 7px;
+  line-height: 1;
   cursor: pointer;
   font-size: 13.5px;
   color: var(--fg-dim);
@@ -778,4 +843,34 @@ body[theme-mode='dark'] .heat i.l4 {
   max-width: 400px;
   width: 100%;
   text-align: center;
+}
+
+/* ---------------------------------------------------------------- 图标选择 */
+
+.icon-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+  gap: 6px;
+  max-height: 190px;
+  overflow-y: auto;
+  padding: 2px;
+}
+.icon-picker button {
+  aspect-ratio: 1;
+  border: 1px solid var(--line);
+  background: var(--bg-elev);
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: var(--fg-dim);
+}
+.icon-picker button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.icon-picker button.on {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
 }

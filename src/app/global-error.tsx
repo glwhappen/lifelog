@@ -7,7 +7,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
       <body style={{ margin: 0, fontFamily: 'system-ui, sans-serif', background: '#f6f7f9', color: '#1b1f24' }}>
         <div style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', padding: 24 }}>
           <div style={{ textAlign: 'center', maxWidth: 380 }}>
-            <div style={{ fontSize: 34, marginBottom: 8 }}>😵‍💫</div>
+
             <h1 style={{ fontSize: 18, margin: '0 0 8px' }}>服务暂时不可用</h1>
             <p style={{ color: '#6b7280', fontSize: 14, margin: '0 0 18px' }}>
               数据存在你自己的数据库里，不会丢。请稍后重试。

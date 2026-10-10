@@ -55,9 +55,13 @@ LifeLog 把所有值得记的东西收进**一张统一流水表**，再用 **MC
 | --- | --- |
 | ![统计](docs/screenshot-stats.png) | ![MCP](docs/screenshot-mcp.png) |
 
-<p align="center"><img src="docs/screenshot-mobile.png" width="300" alt="手机端"></p>
+<p align="center">
+  <img src="docs/screenshot-mobile.png" width="290" alt="手机端">
+  <img src="docs/screenshot-timeline.png" width="420" alt="时间轴">
+</p>
 
----
+界面用 [lucide](https://lucide.dev) 线性图标（不是 emoji）：emoji 在 Apple / Google / Windows
+三套字体下长得都不一样，粗细也对不齐；线性图标跟着 `currentColor` 走，暗色模式自然一致。
 
 ## 能记什么
 

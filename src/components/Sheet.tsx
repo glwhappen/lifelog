@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { X } from './icons';
 
 /**
  * 通用底部弹层（移动端） / 居中弹窗（桌面）。
@@ -9,17 +10,19 @@ import { useEffect } from 'react';
 export function Sheet({
   open,
   title,
+  icon,
   onClose,
   children,
   footer,
 }: {
   open: boolean;
   title: string;
+  icon?: React.ReactNode;
   onClose: () => void;
   children: React.ReactNode;
   footer?: React.ReactNode;
 }) {
-  // Esc 关闭 + 打开时锁住背景滚动
+  // Esc 关闭
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -35,10 +38,13 @@ export function Sheet({
     <div className="sheet-mask" onClick={onClose} role="dialog" aria-modal="true" aria-label={title}>
       <div className="sheet" onClick={(e) => e.stopPropagation()}>
         <div className="card-head">
-          <h3>{title}</h3>
+          <h3>
+            {icon}
+            {title}
+          </h3>
           <span className="grow" />
-          <button className="btn ghost sm" onClick={onClose} aria-label="关闭">
-            关闭
+          <button className="btn ghost icon-btn" onClick={onClose} aria-label="关闭">
+            <X size={17} />
           </button>
         </div>
         {children}

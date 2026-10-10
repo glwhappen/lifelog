@@ -91,7 +91,7 @@ export async function digest(
 
     for (const [kind, items] of Object.entries(d.entries)) {
       if (!items.length) continue;
-      lines.push(`- ${kindMeta(kind).icon} ${kindLabel(kind)}`);
+      lines.push(`- ${kindMeta(kind).emoji} ${kindLabel(kind)}`);
       for (const e of items.slice(0, 40)) lines.push(`  ${entryLine(e as any)}`);
     }
 

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Sheet, Field } from './Sheet';
 import { useToast } from './Providers';
 import { call } from '@/lib/client';
+import { ListChecks, Trash2 } from './icons';
 
 export interface EditableTask {
   id: number;
@@ -101,13 +102,15 @@ export function TaskEditor({
     <Sheet
       open
       title="编辑待办"
+      icon={<ListChecks size={16} />}
       onClose={onClose}
       footer={
         <>
           <button className="btn primary grow" disabled={busy} onClick={save}>
             保存
           </button>
-          <button className="btn danger" disabled={busy} onClick={remove}>
+          <button className="btn danger row" style={{ gap: 5 }} disabled={busy} onClick={remove}>
+            <Trash2 size={14} />
             删除
           </button>
         </>

@@ -4,15 +4,19 @@ import type { Habit, HabitLog } from './types';
 
 const HABIT_COLS = `id, user_id, name, icon, color, kind, target, unit, freq, sort, active, created_at`;
 
+/**
+ * 默认习惯。`icon` 存的是 src/components/icons.tsx 里的图标键名（不是 emoji）——
+ * 换图标集时只改组件，不用动数据。
+ */
 export const DEFAULT_HABITS: Array<Pick<Habit, 'name' | 'icon' | 'kind' | 'target' | 'unit' | 'sort'>> = [
-  { name: '早起', icon: '🌅', kind: 'bool', target: null, unit: null, sort: 10 },
-  { name: '运动', icon: '🏃', kind: 'bool', target: null, unit: null, sort: 20 },
-  { name: '阅读', icon: '📖', kind: 'bool', target: null, unit: null, sort: 30 },
-  { name: '喝水', icon: '💧', kind: 'count', target: 8, unit: '杯', sort: 40 },
-  { name: '颈椎操', icon: '🧘', kind: 'bool', target: null, unit: null, sort: 50 },
-  { name: '不熬夜', icon: '🌙', kind: 'bool', target: null, unit: null, sort: 60 },
-  { name: '记账', icon: '💰', kind: 'bool', target: null, unit: null, sort: 70 },
-  { name: '每日复盘', icon: '📝', kind: 'bool', target: null, unit: null, sort: 80 },
+  { name: '早起', icon: 'sunrise', kind: 'bool', target: null, unit: null, sort: 10 },
+  { name: '运动', icon: 'dumbbell', kind: 'bool', target: null, unit: null, sort: 20 },
+  { name: '阅读', icon: 'book', kind: 'bool', target: null, unit: null, sort: 30 },
+  { name: '喝水', icon: 'water', kind: 'count', target: 8, unit: '杯', sort: 40 },
+  { name: '颈椎操', icon: 'stretch', kind: 'bool', target: null, unit: null, sort: 50 },
+  { name: '不熬夜', icon: 'moon', kind: 'bool', target: null, unit: null, sort: 60 },
+  { name: '记账', icon: 'wallet', kind: 'bool', target: null, unit: null, sort: 70 },
+  { name: '每日复盘', icon: 'note', kind: 'bool', target: null, unit: null, sort: 80 },
 ];
 
 export async function listHabits(userId: string, includeInactive = false): Promise<Habit[]> {

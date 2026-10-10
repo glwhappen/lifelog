@@ -5,6 +5,7 @@ import { AppShell } from '@/components/AppShell';
 import { Gate } from '@/components/Gate';
 import { useToast } from '@/components/Providers';
 import { call, callGet } from '@/lib/client';
+import { Flame, HabitIcon, HABIT_ICONS, Pencil, Plus, Trash2 } from '@/components/icons';
 
 interface Habit {
   id: number;
@@ -45,6 +46,7 @@ function Habits() {
   const [newKind, setNewKind] = useState<'bool' | 'count'>('bool');
   const [newTarget, setNewTarget] = useState('');
   const [newUnit, setNewUnit] = useState('');
+  const [newIcon, setNewIcon] = useState('sparkles');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -106,14 +108,30 @@ function Habits() {
             <div className="card" key={s.habit.id}>
               <div className="card-head">
                 <h2>
-                  {s.habit.icon || '🔥'} {s.habit.name}
+                  <HabitIcon name={s.habit.icon} size={17} />
+                  {s.habit.name}
                 </h2>
                 <span className="grow" />
-                <span className="pill green">连续 {s.currentStreak} 天</span>
+                <span className={`pill ${s.currentStreak > 0 ? 'green' : ''}`}>连续 {s.currentStreak} 天</span>
                 <span className="pill">最长 {s.longestStreak}</span>
+                <button
+                  className="btn ghost icon-btn danger"
+                  disabled={busy}
+                  title="删除习惯"
+                  aria-label="删除习惯"
+                  onClick={() => {
+                    if (confirm(`删除习惯「${s.habit.name}」？其打卡记录也会一起删除。`)) {
+                      run(() => call('delete_habit', { habit: s.habit.id }), '已删除');
+                    }
+                  }}
+                >
+                  <Trash2 size={14} />
+                </button>
               </div>
 
-              <div className="row" style={{ marginBottom: 10, gap: 8 }}>
+              {/* 桌面端把热力图放到控件同一行的右侧，卡片才不会右半边空着 */}
+              <div className="habit-body">
+              <div className="row" style={{ gap: 8 }}>
                 <button
                   className={`habit ${s.today >= 1 && s.habit.kind === 'bool' ? 'on' : ''}`}
                   disabled={busy}
@@ -137,25 +155,14 @@ function Habits() {
                     {s.habit.target ? `/${s.habit.target}` : ''} {s.habit.unit || ''}
                   </span>
                 )}
-                <span className="grow" />
                 <span className="small muted">
                   {s.doneDays}/{s.totalDays} 天 · {(s.rate * 100).toFixed(0)}%
                 </span>
-                <button
-                  className="btn ghost sm danger"
-                  disabled={busy}
-                  onClick={() => {
-                    if (confirm(`删除习惯「${s.habit.name}」？其打卡记录也会一起删除。`)) {
-                      run(() => call('delete_habit', { habit: s.habit.id }), '已删除');
-                    }
-                  }}
-                >
-                  删除
-                </button>
               </div>
 
               {/* 按周对齐的热力图：每列 7 天，一眼看出「断在哪天」和星期规律 */}
               <HeatGrid cells={cells.slice(-182)} unit={s.habit.unit} kind={s.habit.kind} target={s.habit.target} />
+              </div>
             </div>
           );
         })
@@ -163,8 +170,28 @@ function Habits() {
 
       <div className="card">
         <div className="card-head">
-          <h2>新增习惯</h2>
+          <h2>
+            <Plus size={16} /> 新增习惯
+          </h2>
         </div>
+        <div className="small muted" style={{ marginBottom: 6 }}>
+          选个图标
+        </div>
+        <div className="icon-picker" style={{ marginBottom: 12 }}>
+          {HABIT_ICONS.map(({ key, label, Icon }) => (
+            <button
+              key={key}
+              type="button"
+              className={newIcon === key ? 'on' : ''}
+              title={label}
+              aria-label={label}
+              onClick={() => setNewIcon(key)}
+            >
+              <Icon size={17} />
+            </button>
+          ))}
+        </div>
+
         <div className="row wrap">
           <input className="ipt grow" placeholder="习惯名，如 冥想" value={newName} onChange={(e) => setNewName(e.target.value)} style={{ minWidth: 140 }} />
           <select className="ipt" value={newKind} onChange={(e) => setNewKind(e.target.value as 'bool' | 'count')} style={{ width: 108 }}>
@@ -184,6 +211,7 @@ function Habits() {
               run(async () => {
                 await call('add_habit', {
                   name: newName.trim(),
+                  icon: newIcon,
                   kind: newKind,
                   target: newKind === 'count' && newTarget ? Number(newTarget) : undefined,
                   unit: newKind === 'count' ? newUnit || undefined : undefined,

@@ -43,6 +43,11 @@
     否则撤销会把新值当旧值（踩过一次）。
 16. 动 AI 相关代码前先看 `tests/integration/ai-capture.test.ts`：
     模型调用一律 mock，**测试绝不能真的花钱调模型**。
+17. **图标一律从 `@/components/icons` 引，不要直接 import lucide-react**，
+    也不要在界面里写 emoji（emoji 跨平台渲染不一致）。唯一允许保留 emoji 的地方是
+    Markdown 导出（`kinds.ts` 的 `emoji` 字段）—— 纯文本场景放不了 SVG。
+18. 习惯图标在数据库里存的是**键名**（`sunrise`），不是 emoji；
+    增删图标要同步 `icons.tsx` 的 `HABIT_ICONS`。
 
 ## 常用命令
 

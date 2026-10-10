@@ -5,6 +5,7 @@ import { AppShell } from '@/components/AppShell';
 import { Gate } from '@/components/Gate';
 import { useMe, useTheme, useToast } from '@/components/Providers';
 import { callGet, call } from '@/lib/client';
+import { Bot, Copy, Download, ExternalLink, FileJson, KeyRound, LogOut, Moon, ShieldCheck, Sun, Trash2, User } from '@/components/icons';
 
 interface ApiKeyRow {
   id: number;
@@ -109,14 +110,18 @@ function Settings() {
     <>
       <div className="card">
         <div className="card-head">
-          <h2>👤 账号</h2>
+          <h2>
+            <User size={16} /> 账号
+          </h2>
         </div>
         <div className="row" style={{ marginBottom: 10 }}>
           {user?.avatar ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={user.avatar} alt="" width={44} height={44} style={{ borderRadius: '50%' }} />
           ) : (
-            <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--accent-soft)', display: 'grid', placeItems: 'center', fontSize: 20 }}>👤</div>
+            <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--accent-soft)', display: 'grid', placeItems: 'center', color: 'var(--accent)' }}>
+              <User size={22} />
+            </div>
           )}
           <div className="body">
             <div style={{ fontWeight: 600 }}>{user?.name || user?.username}</div>
@@ -147,10 +152,12 @@ function Settings() {
             ))}
           </select>
           <span className="grow" />
-          <button className="btn sm" onClick={toggle}>
-            主题：{theme === 'dark' ? '暗色' : '亮色'}
+          <button className="btn sm row" style={{ gap: 5 }} onClick={toggle}>
+            {theme === 'dark' ? <Moon size={14} /> : <Sun size={14} />}
+            {theme === 'dark' ? '暗色' : '亮色'}
           </button>
-          <button className="btn sm" onClick={() => (window.location.href = '/auth/logout')}>
+          <button className="btn sm row" style={{ gap: 5 }} onClick={() => (window.location.href = '/auth/logout')}>
+            <LogOut size={14} />
             退出登录
           </button>
         </div>
@@ -158,9 +165,12 @@ function Settings() {
 
       <div className="card">
         <div className="card-head">
-          <h2>🤖 AI 接入（MCP）</h2>
+          <h2>
+            <Bot size={16} /> AI 接入（MCP）
+          </h2>
           <span className="grow" />
-          <a className="btn sm" href="/api/v1/tools" target="_blank" rel="noreferrer">
+          <a className="btn sm row" style={{ gap: 5 }} href="/api/v1/tools" target="_blank" rel="noreferrer">
+            <ExternalLink size={13} />
             查看全部能力
           </a>
         </div>
@@ -169,8 +179,8 @@ function Settings() {
         </p>
         <div className="row" style={{ marginBottom: 8 }}>
           <input className="ipt mono small" readOnly value={mcpUrl} onFocus={(e) => e.currentTarget.select()} />
-          <button className="btn sm" onClick={() => navigator.clipboard.writeText(mcpUrl).then(() => show('已复制'))}>
-            复制
+          <button className="btn icon-btn" title="复制" aria-label="复制" onClick={() => navigator.clipboard.writeText(mcpUrl).then(() => show('已复制'))}>
+            <Copy size={15} />
           </button>
         </div>
         <details>
@@ -194,18 +204,25 @@ function Settings() {
 
       <div className="card">
         <div className="card-head">
-          <h2>🔑 API Key</h2>
+          <h2>
+            <KeyRound size={16} /> API Key
+          </h2>
         </div>
 
         {newKey && (
           <div className="card" style={{ background: 'var(--green-soft)', borderColor: 'var(--green)', boxShadow: 'none' }}>
             <div className="small" style={{ marginBottom: 6 }}>
-              ✅ 新密钥已生成，<b>只显示这一次</b>，请立刻保存：
+              <span className="row" style={{ gap: 6 }}>
+                <ShieldCheck size={15} />
+                <span>
+                  新密钥已生成，<b>只显示这一次</b>，请立刻保存：
+                </span>
+              </span>
             </div>
             <div className="row">
               <input className="ipt mono small" readOnly value={newKey} onFocus={(e) => e.currentTarget.select()} />
-              <button className="btn primary sm" onClick={() => navigator.clipboard.writeText(newKey).then(() => show('已复制'))}>
-                复制
+              <button className="btn primary icon-btn" title="复制" aria-label="复制" onClick={() => navigator.clipboard.writeText(newKey).then(() => show('已复制'))}>
+                <Copy size={15} />
               </button>
             </div>
             <button className="btn ghost sm" style={{ marginTop: 6 }} onClick={() => setNewKey(null)}>
@@ -242,8 +259,8 @@ function Settings() {
                 </div>
               </div>
               {!k.revoked_at && (
-                <button className="btn ghost sm danger" disabled={busy} onClick={() => revoke(k.id)}>
-                  吊销
+                <button className="btn ghost icon-btn danger" disabled={busy} title="吊销" aria-label="吊销" onClick={() => revoke(k.id)}>
+                  <Trash2 size={14} />
                 </button>
               )}
             </div>
@@ -253,7 +270,9 @@ function Settings() {
 
       <div className="card">
         <div className="card-head">
-          <h2>📤 导出</h2>
+          <h2>
+            <Download size={16} /> 导出
+          </h2>
         </div>
         <p className="small muted" style={{ marginTop: 0 }}>
           导出为 Markdown（可以直接喂给大模型，或存进你的笔记库）。
@@ -271,13 +290,15 @@ function Settings() {
         </div>
 
         <p className="small muted" style={{ margin: '0 0 8px' }}>
-          想整包带走？导出**全部原始数据**（JSON，表结构原样），随时可迁走或自己分析。
+          想整包带走？导出<b>全部原始数据</b>（JSON，表结构原样），随时可迁走或自己分析。
         </p>
         <div className="row wrap">
-          <a className="btn sm" href="/api/export" download>
+          <a className="btn sm row" style={{ gap: 5 }} href="/api/export" download>
+            <FileJson size={14} />
             全部数据（JSON）
           </a>
-          <a className="btn sm" href="/api/export?days=365" download>
+          <a className="btn sm row" style={{ gap: 5 }} href="/api/export?days=365" download>
+            <FileJson size={14} />
             近一年（JSON）
           </a>
         </div>
@@ -285,7 +306,9 @@ function Settings() {
 
       <div className="card">
         <div className="card-head">
-          <h2>ℹ️ 关于</h2>
+          <h2>
+            <ShieldCheck size={16} /> 关于
+          </h2>
         </div>
         <p className="small muted" style={{ margin: 0, lineHeight: 1.8 }}>
           LifeLog · 自托管个人生活记录平台。数据全部存在你自己的 Postgres 里，登录走你自己的 OIDC。

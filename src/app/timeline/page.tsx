@@ -6,6 +6,7 @@ import { Gate } from '@/components/Gate';
 import { useMe, useToast } from '@/components/Providers';
 import { callGet, hhmm, money } from '@/lib/client';
 import { kindMeta } from '@/lib/kinds';
+import { KindIcon, Pencil } from '@/components/icons';
 import { EntryEditor, type EditableEntry } from '@/components/EntryEditor';
 
 interface Entry {
@@ -23,14 +24,14 @@ interface Entry {
 }
 
 const KINDS: Array<[string, string, string]> = [
-  ['', '全部', '🧭'],
-  ['idea', '灵感', '💡'],
-  ['note', '记录', '📝'],
-  ['done', '完成', '✅'],
-  ['expense,income', '收支', '💰'],
-  ['workout', '运动', '🏃'],
-  ['sleep,weight,water,mood,energy,focus', '健康', '❤️'],
-  ['location', '位置', '📍'],
+  ['', '全部', 'note'],
+  ['idea', '灵感', 'idea'],
+  ['note', '记录', 'note'],
+  ['done', '完成', 'done'],
+  ['expense,income', '收支', 'expense'],
+  ['workout', '运动', 'workout'],
+  ['sleep,weight,water,mood,energy,focus', '健康', 'sleep'],
+  ['location', '位置', 'location'],
 ];
 
 export default function TimelinePage() {
@@ -96,9 +97,14 @@ function Timeline() {
           ))}
         </div>
         <div className="row wrap" style={{ gap: 6, marginBottom: 8 }}>
-          {KINDS.map(([k, label, icon]) => (
-            <button key={label} className={`pill ${kind === k ? 'accent' : ''}`} style={{ cursor: 'pointer', border: 0 }} onClick={() => setKind(k)}>
-              {icon} {label}
+          {KINDS.map(([k, label, iconKind]) => (
+            <button
+              key={label}
+              className={`pill ${kind === k ? 'accent' : ''}`}
+              style={{ cursor: 'pointer', border: 0 }}
+              onClick={() => setKind(k)}
+            >
+              <KindIcon kind={iconKind} size={13} /> {label}
             </button>
           ))}
         </div>
@@ -137,7 +143,7 @@ function Timeline() {
                     </div>
                     <div className="meta row wrap" style={{ gap: 5 }}>
                       <span className="pill">
-                        {meta.icon} {meta.label}
+                        <KindIcon kind={e.kind} size={13} /> {meta.label}
                       </span>
                       {/* 数值型的 category 就是单位（已显示在右侧），不再重复成标签 */}
                       {!meta.numeric && e.category && <span className="pill">{e.category}</span>}
@@ -163,8 +169,8 @@ function Timeline() {
                       </span>
                     )
                   )}
-                  <button className="btn ghost sm" title="编辑" onClick={() => setEdit(e)}>
-                    ✏️
+                  <button className="btn ghost icon-btn" title="编辑" aria-label="编辑" onClick={() => setEdit(e)}>
+                    <Pencil size={14} />
                   </button>
                 </div>
               );

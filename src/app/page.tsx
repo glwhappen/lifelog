@@ -7,6 +7,22 @@ import { useMe, useToast } from '@/components/Providers';
 import { call, callGet, hhmm, money, moneyShort, todayLocal } from '@/lib/client';
 import { kindMeta } from '@/lib/kinds';
 import { EntryEditor, type EditableEntry } from '@/components/EntryEditor';
+import {
+  CalendarClock,
+  Check,
+  KindIcon,
+  MapPin,
+  Pencil,
+  Sparkles,
+  TriangleAlert,
+  Undo2,
+  HabitIcon,
+  MOOD_FACES,
+  Flame,
+  ListChecks,
+  Receipt,
+  Smile,
+} from '@/components/icons';
 import { TaskEditor, type EditableTask } from '@/components/TaskEditor';
 
 interface Entry {
@@ -202,7 +218,9 @@ function Today() {
       {data && data.habits.length > 0 && (
         <div className="card">
           <div className="card-head">
-            <h2>🔥 习惯打卡</h2>
+            <h2>
+              <Flame size={16} /> 习惯打卡
+            </h2>
             <span className="grow" />
             <span className="sub">
               {data.habits.filter((h) => h.done).length}/{data.habits.length}
@@ -224,7 +242,7 @@ function Today() {
                   )
                 }
               >
-                <span>{h.icon || '•'}</span>
+                <HabitIcon name={h.icon} size={14} />
                 {h.name}
                 {h.kind === 'count' && (
                   <span className="cnt">
@@ -243,7 +261,9 @@ function Today() {
       {data && (
         <div className="card">
           <div className="card-head">
-            <h2>✅ 待办</h2>
+            <h2>
+              <ListChecks size={16} /> 待办
+            </h2>
             <span className="grow" />
             <span className="sub">
               {data.pending.length} 项待完成
@@ -285,7 +305,7 @@ function Today() {
                 disabled={busy}
                 onClick={() => patch(() => call('complete_task', { task: t.id, day }), `完成：${t.title}`)}
               >
-                ✓
+                <Check size={13} strokeWidth={3} />
               </button>
               <div className="body">
                 <div className="title">
@@ -296,15 +316,16 @@ function Today() {
                 {t.due_day && <div className="meta">截止 {t.due_day}</div>}
               </div>
               <button
-                className="btn ghost sm"
+                className="btn ghost icon-btn"
                 disabled={busy}
                 title="顺延到明天"
+                aria-label="顺延到明天"
                 onClick={() => patch(() => call('postpone_task', { task: t.id }), '已顺延到明天')}
               >
-                顺延
+                <CalendarClock size={15} />
               </button>
-              <button className="btn ghost sm" disabled={busy} title="编辑" onClick={() => setEditTask(t)}>
-                ✏️
+              <button className="btn ghost icon-btn" disabled={busy} title="编辑" aria-label="编辑" onClick={() => setEditTask(t)}>
+                <Pencil size={14} />
               </button>
             </div>
           ))}
@@ -317,7 +338,7 @@ function Today() {
               {data.done.map((t) => (
                 <div className="item done-item" key={t.id}>
                   <span className="check on" style={{ cursor: 'default' }}>
-                    ✓
+                    <Check size={13} strokeWidth={3} />
                   </span>
                   <div className="body">
                     <div className="title">{t.title}</div>
@@ -330,8 +351,8 @@ function Today() {
                   >
                     撤销
                   </button>
-                  <button className="btn ghost sm" disabled={busy} title="编辑" onClick={() => setEditTask(t)}>
-                    ✏️
+                  <button className="btn ghost icon-btn" disabled={busy} title="编辑" aria-label="编辑" onClick={() => setEditTask(t)}>
+                    <Pencil size={14} />
                   </button>
                 </div>
               ))}
@@ -346,7 +367,7 @@ function Today() {
               {data.overdue.map((t) => (
                 <div className="item" key={t.id}>
                   <button className="check" disabled={busy} onClick={() => patch(() => call('complete_task', { task: t.id }), '已完成')}>
-                    ✓
+                    <Check size={13} strokeWidth={3} />
                   </button>
                   <div className="body">
                     <div className="title">
@@ -356,8 +377,8 @@ function Today() {
                   <button className="btn ghost sm" disabled={busy} onClick={() => patch(() => call('postpone_task', { task: t.id }), '已顺延到今天')}>
                     今天做
                   </button>
-                  <button className="btn ghost sm" disabled={busy} title="编辑" onClick={() => setEditTask(t)}>
-                    ✏️
+                  <button className="btn ghost icon-btn" disabled={busy} title="编辑" aria-label="编辑" onClick={() => setEditTask(t)}>
+                    <Pencil size={14} />
                   </button>
                 </div>
               ))}
@@ -373,7 +394,8 @@ function Today() {
           <div className="card" key={kind}>
             <div className="card-head">
               <h2>
-                {meta.icon} {meta.label}
+                <KindIcon kind={kind} size={16} />
+                {meta.label}
               </h2>
               <span className="grow" />
               <span className="sub">{items.length} 条</span>
@@ -410,7 +432,9 @@ function Today() {
       {data && data.finance.items.length > 0 && (
         <div className="card">
           <div className="card-head">
-            <h2>💰 今日收支</h2>
+            <h2>
+              <Receipt size={16} /> 今日收支
+            </h2>
             <span className="grow" />
             <span className="sub">
               支出 {money(data.finance.expense)} · 收入 {money(data.finance.income)}
@@ -427,8 +451,8 @@ function Today() {
                 {e.kind === 'expense' ? '-' : '+'}
                 {money(e.amount)}
               </span>
-              <button className="btn ghost sm" title="编辑" onClick={() => setEditEntry(e)}>
-                ✏️
+              <button className="btn ghost icon-btn" title="编辑" aria-label="编辑" onClick={() => setEditEntry(e)}>
+                <Pencil size={14} />
               </button>
             </div>
           ))}
@@ -439,7 +463,9 @@ function Today() {
       {data && (
         <div className="card">
           <div className="card-head">
-            <h2>📍 位置</h2>
+            <h2>
+              <MapPin size={16} /> 位置
+            </h2>
             <span className="grow" />
             <button className="btn sm" disabled={geoState === 'asking'} onClick={() => recordLocation(false)}>
               {geoState === 'asking' ? '定位中…' : '记录当前位置'}
@@ -469,7 +495,9 @@ function Today() {
       {data && (
         <div className="card">
           <div className="card-head">
-            <h2>🪞 今天总结</h2>
+            <h2>
+              <Smile size={16} /> 今天总结
+            </h2>
           </div>
           <div className="row wrap" style={{ marginBottom: 6 }}>
             <span className="small muted" style={{ minWidth: 30 }}>
@@ -479,11 +507,15 @@ function Today() {
               <button
                 key={v}
                 className={`habit ${data.summary?.mood === v ? 'on' : ''}`}
-                style={{ padding: '4px 10px' }}
+                style={{ padding: '6px 10px' }}
                 disabled={busy}
+                aria-label={`心情 ${v} 分`}
                 onClick={() => patch(() => call('save_summary', { day, mood: v }), '已记录心情')}
               >
-                {['😞', '😕', '😐', '🙂', '😄'][v - 1]}
+                {(() => {
+                  const Face = MOOD_FACES[v - 1];
+                  return <Face size={16} />;
+                })()}
               </button>
             ))}
           </div>
@@ -520,7 +552,7 @@ function Today() {
           />
           {data.summary?.ai_summary && (
             <div className="small muted" style={{ marginTop: 8, whiteSpace: 'pre-wrap' }}>
-              🤖 {data.summary.ai_summary}
+              {data.summary.ai_summary}
             </div>
           )}
         </div>
@@ -628,24 +660,27 @@ function QuickCapture({ onDone }: { onDone: () => Promise<void> }) {
         disabled={busy}
       />
       <div className="bar">
-        <span className="faint small">
-          {busy ? '✨ AI 正在理解…' : 'AI 解析：记录 / 修改 / 删除都能听懂'}
+        <span className="faint small row" style={{ gap: 5 }}>
+          <Sparkles size={13} />
+          {busy ? 'AI 正在理解…' : 'AI 解析：记录 / 修改 / 删除都能听懂'}
         </span>
         <span className="grow" />
-        <button className="btn primary sm" disabled={busy || !text.trim()} onClick={() => send()}>
-          {busy ? '理解中…' : '✨ 记一笔'}
+        <button className="btn primary sm row" style={{ gap: 5 }} disabled={busy || !text.trim()} onClick={() => send()}>
+          <Sparkles size={14} strokeWidth={2.2} />
+          {busy ? '理解中…' : '记一笔'}
         </button>
       </div>
 
       {outcome && (
         <div style={{ borderTop: '1px solid var(--line)', marginTop: 10, paddingTop: 10 }}>
           <div className="row" style={{ alignItems: 'flex-start', gap: 8 }}>
-            <span style={{ fontSize: 15 }}>{outcome.usedAi ? '✨' : '📌'}</span>
+            {outcome.usedAi ? <Sparkles size={15} /> : <Pencil size={15} />}
             <div className="body small" style={{ flex: 1 }}>
               {outcome.reply || '（没有可执行的动作）'}
             </div>
             {outcome.undo.length > 0 && (
-              <button className="btn ghost sm" disabled={busy} onClick={undo}>
+              <button className="btn ghost sm row" style={{ gap: 4 }} disabled={busy} onClick={undo}>
+                <Undo2 size={13} />
                 撤销
               </button>
             )}
@@ -678,8 +713,9 @@ function QuickCapture({ onDone }: { onDone: () => Promise<void> }) {
               className="row wrap"
               style={{ gap: 8, marginTop: 10, background: 'var(--amber-soft)', borderRadius: 10, padding: '9px 11px' }}
             >
-              <span className="small" style={{ flex: 1 }}>
-                ⚠️ 要执行删除：{outcome.pending.map((p) => p.label).join('；')}
+              <span className="small row" style={{ flex: 1, gap: 6 }}>
+                <TriangleAlert size={15} />
+                要执行删除：{outcome.pending.map((p) => p.label).join('；')}
               </span>
               <button className="btn sm" disabled={confirming} onClick={() => setOutcome(null)}>
                 取消

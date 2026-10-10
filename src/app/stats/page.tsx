@@ -6,6 +6,7 @@ import { Gate } from '@/components/Gate';
 import { useToast } from '@/components/Providers';
 import { callGet, money } from '@/lib/client';
 import { kindLabel } from '@/lib/kinds';
+import { Activity, ChartLine, Flame, HabitIcon, PieChart, Receipt, Tag } from '@/components/icons';
 
 interface Overview {
   from: string;
@@ -104,7 +105,9 @@ function Stats() {
 
       <div className="card">
         <div className="card-head">
-          <h2>📅 每日记录量</h2>
+          <h2>
+            <ChartLine size={16} /> 每日记录量
+          </h2>
           <span className="grow" />
           <span className="sub">
             完成 {ov.tasks.done} · 新建 {ov.tasks.created}
@@ -131,7 +134,9 @@ function Stats() {
       <div className="grid-cards">
         <div className="card">
           <div className="card-head">
-            <h2>🏷️ 记录类型分布</h2>
+            <h2>
+            <PieChart size={16} /> 记录类型分布
+          </h2>
           </div>
           {ov.byKind.length === 0 ? (
             <div className="empty">暂无数据</div>
@@ -152,7 +157,9 @@ function Stats() {
 
         <div className="card">
           <div className="card-head">
-            <h2>🔥 习惯坚持</h2>
+            <h2>
+            <Flame size={16} /> 习惯坚持
+          </h2>
           </div>
           {ov.habits.length === 0 ? (
             <div className="empty">还没有习惯</div>
@@ -161,13 +168,13 @@ function Stats() {
               <div className="item" key={h.name}>
                 <div className="body">
                   <div className="title">
-                    {h.icon || '•'} {h.name}
+                    <HabitIcon name={h.icon} size={14} /> {h.name}
                   </div>
                   <div className="meta">
                     {h.doneDays}/{h.totalDays} 天
                   </div>
                 </div>
-                <span className="pill green">连续 {h.currentStreak} 天</span>
+                <span className={`pill ${h.currentStreak > 0 ? 'green' : ''}`}>连续 {h.currentStreak} 天</span>
                 <span className="mono faint" style={{ width: 40, textAlign: 'right' }}>
                   {(h.rate * 100).toFixed(0)}%
                 </span>
@@ -180,7 +187,9 @@ function Stats() {
       {ov.metrics.length > 0 && (
         <div className="card">
           <div className="card-head">
-            <h2>📊 健康与状态指标</h2>
+            <h2>
+              <Activity size={16} /> 健康与状态指标
+            </h2>
           </div>
           {ov.metrics.map((m) => (
             <div className="item" key={m.kind + (m.unit ?? '')}>
@@ -203,7 +212,9 @@ function Stats() {
       <div className="grid-cards">
         <div className="card">
           <div className="card-head">
-            <h2>💰 收支</h2>
+            <h2>
+              <Receipt size={16} /> 收支
+            </h2>
           </div>
           <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
             <span className="muted small">支出</span>
@@ -233,7 +244,9 @@ function Stats() {
 
         <div className="card">
           <div className="card-head">
-            <h2># 常用标签</h2>
+            <h2>
+              <Tag size={16} /> 常用标签
+            </h2>
           </div>
           {ov.topTags.length === 0 ? (
             <div className="empty">暂无标签</div>

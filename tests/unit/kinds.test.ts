@@ -7,12 +7,12 @@ describe('kinds —— 流水类型元数据', () => {
     for (const k of ENTRY_KINDS) {
       expect(KIND_META[k], `缺少 ${k} 的展示元数据`).toBeDefined();
       expect(kindMeta(k).label).not.toBe(k);
-      expect(kindMeta(k).icon.length).toBeGreaterThan(0);
+      expect(kindMeta(k).emoji.length).toBeGreaterThan(0);
     }
   });
 
   it('未知类型不会崩，退回原始名', () => {
-    expect(kindMeta('something_new')).toEqual({ icon: '•', label: 'something_new' });
+    expect(kindMeta('something_new')).toEqual({ emoji: '•', label: 'something_new' });
     expect(kindLabel('something_new')).toBe('something_new');
   });
 

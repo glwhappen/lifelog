@@ -6,6 +6,7 @@ import { Gate } from '@/components/Gate';
 import { useMe, useToast } from '@/components/Providers';
 import { callGet, call, todayLocal } from '@/lib/client';
 import { TaskEditor, type EditableTask } from '@/components/TaskEditor';
+import { CalendarClock, Check, ListChecks, Pencil, Trash2 } from '@/components/icons';
 
 interface Task {
   id: number;
@@ -112,7 +113,10 @@ function Tasks() {
         {loading ? (
           <div className="empty">加载中…</div>
         ) : tasks.length === 0 ? (
-          <div className="empty">这里空空如也</div>
+          <div className="empty">
+            <ListChecks size={26} style={{ opacity: 0.4, marginBottom: 6 }} />
+            <div>这里空空如也</div>
+          </div>
         ) : (
           tasks.map((t) => (
             <div className={`item ${t.status === 'done' ? 'done-item' : ''}`} key={t.id}>
@@ -123,11 +127,11 @@ function Tasks() {
                   title="恢复为待办"
                   onClick={() => run(() => call('update_task', { task: t.id, status: 'pending' }), '已恢复')}
                 >
-                  ✓
+                  <Check size={13} strokeWidth={3} />
                 </button>
               ) : (
-                <button className="check" disabled={busy} onClick={() => run(() => call('complete_task', { task: t.id }), '已完成')}>
-                  ✓
+                <button className="check" disabled={busy} aria-label="完成" onClick={() => run(() => call('complete_task', { task: t.id }), '已完成')}>
+                  <Check size={13} strokeWidth={3} />
                 </button>
               )}
               <div className="body">
@@ -148,21 +152,29 @@ function Tasks() {
               </div>
               <div className="row" style={{ gap: 2 }}>
                 {t.status !== 'done' && (
-                  <button className="btn ghost sm" disabled={busy} onClick={() => run(() => call('postpone_task', { task: t.id }), '已顺延')}>
-                    顺延
+                  <button
+                    className="btn ghost icon-btn"
+                    disabled={busy}
+                    title="顺延到明天"
+                    aria-label="顺延到明天"
+                    onClick={() => run(() => call('postpone_task', { task: t.id }), '已顺延')}
+                  >
+                    <CalendarClock size={15} />
                   </button>
                 )}
-                <button className="btn ghost sm" disabled={busy} title="编辑" onClick={() => setEdit(t)}>
-                  ✏️
+                <button className="btn ghost icon-btn" disabled={busy} title="编辑" aria-label="编辑" onClick={() => setEdit(t)}>
+                  <Pencil size={14} />
                 </button>
                 <button
-                  className="btn ghost sm danger"
+                  className="btn ghost icon-btn danger"
                   disabled={busy}
+                  title="删除"
+                  aria-label="删除"
                   onClick={() => {
                     if (confirm(`删除待办「${t.title}」？`)) run(() => call('delete_task', { task: t.id }), '已删除');
                   }}
                 >
-                  删除
+                  <Trash2 size={14} />
                 </button>
               </div>
             </div>
