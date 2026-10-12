@@ -11,6 +11,27 @@
 import {
   Activity,
   Annoyed,
+  Award,
+  Baby,
+  Briefcase,
+  Cake,
+  CalendarHeart,
+  Car,
+  Church,
+  Flower2,
+  Gem,
+  Gift,
+  GraduationCap,
+  Heart,
+  Hourglass,
+  House,
+  Milestone,
+  PartyPopper,
+  PawPrint,
+  Plane,
+  Sprout,
+  Star,
+  Trophy,
   ArrowRight,
   Bot,
   Frown,
@@ -100,6 +121,7 @@ export interface IconProps {
   size?: number;
   strokeWidth?: number;
   className?: string;
+  style?: React.CSSProperties;
 }
 
 type IconCmp = React.ComponentType<IconProps & { 'aria-hidden'?: boolean }>;
@@ -107,7 +129,7 @@ type IconCmp = React.ComponentType<IconProps & { 'aria-hidden'?: boolean }>;
 /* ---------------------------------------------------------------- 品牌 */
 
 /** 与 public/favicon.svg 同一个图形，保证站点图标和界面里的一致 */
-export function Logo({ size = 22, className }: IconProps) {
+export function Logo({ size = 22, className, style }: IconProps) {
   return (
     <svg
       width={size}
@@ -116,7 +138,7 @@ export function Logo({ size = 22, className }: IconProps) {
       fill="none"
       aria-hidden
       className={className}
-      style={{ display: 'block' }}
+      style={{ display: 'block', ...style }}
     >
       <path
         d="M32 14v20M32 34l9 6M32 34l-9 6"
@@ -154,9 +176,9 @@ const KIND_ICONS: Record<string, IconCmp> = {
   metric: Gauge,
 };
 
-export function KindIcon({ kind, size = 15, strokeWidth = 2, className }: IconProps & { kind: string }) {
+export function KindIcon({ kind, size = 15, strokeWidth = 2, className, style }: IconProps & { kind: string }) {
   const Cmp = KIND_ICONS[kind] ?? NotebookPen;
-  return <Cmp size={size} strokeWidth={strokeWidth} className={className} aria-hidden />;
+  return <Cmp size={size} strokeWidth={strokeWidth} className={className} style={style} aria-hidden />;
 }
 
 export function kindIconExists(kind: string): boolean {
@@ -213,16 +235,52 @@ export const HABIT_ICONS: Array<{ key: string; label: string; Icon: IconCmp }> =
 const HABIT_ICON_MAP = new Map(HABIT_ICONS.map((h) => [h.key, h.Icon]));
 
 /** 习惯图标：认识就用图标，不认识（例如旧的 emoji 数据）就原样当文本渲染 */
-export function HabitIcon({ name, size = 15, className }: IconProps & { name: string | null | undefined }) {
+export function HabitIcon({ name, size = 15, className, style }: IconProps & { name: string | null | undefined }) {
   if (!name) return null;
   const Cmp = HABIT_ICON_MAP.get(name);
-  if (Cmp) return <Cmp size={size} strokeWidth={2} className={className} aria-hidden />;
+  if (Cmp) return <Cmp size={size} strokeWidth={2} className={className} style={style} aria-hidden />;
   // 老数据兜底：emoji 或任意文本
   return (
-    <span style={{ fontSize: size - 1, lineHeight: 1, display: 'inline-block' }} aria-hidden>
+    <span style={{ fontSize: size - 1, lineHeight: 1, display: 'inline-block', ...style }} aria-hidden>
       {name}
     </span>
   );
+}
+
+/* ---------------------------------------------------------------- 纪念日 */
+
+/**
+ * 纪念日图标库。和习惯一样，数据库里存的是**键名**。
+ * `CounterIcon` 认不出键名时退回默认的心形。
+ */
+export const COUNTER_ICONS: Array<{ key: string; label: string; Icon: IconCmp }> = [
+  { key: 'heart', label: '纪念日', Icon: Heart },
+  { key: 'gem', label: '结婚', Icon: Gem },
+  { key: 'cake', label: '生日', Icon: Cake },
+  { key: 'party', label: '庆祝', Icon: PartyPopper },
+  { key: 'briefcase', label: '入职/离职', Icon: Briefcase },
+  { key: 'baby', label: '孩子', Icon: Baby },
+  { key: 'house', label: '搬家', Icon: House },
+  { key: 'graduation', label: '毕业', Icon: GraduationCap },
+  { key: 'plane', label: '旅行', Icon: Plane },
+  { key: 'car', label: '买车', Icon: Car },
+  { key: 'paw', label: '宠物', Icon: PawPrint },
+  { key: 'flower', label: '植物', Icon: Flower2 },
+  { key: 'sprout', label: '习惯起点', Icon: Sprout },
+  { key: 'star', label: '里程碑', Icon: Star },
+  { key: 'trophy', label: '成就', Icon: Trophy },
+  { key: 'award', label: '荣誉', Icon: Award },
+  { key: 'church', label: '仪式', Icon: Church },
+  { key: 'gift', label: '礼物', Icon: Gift },
+  { key: 'hourglass', label: '等待', Icon: Hourglass },
+  { key: 'milestone', label: '节点', Icon: Milestone },
+];
+
+const COUNTER_ICON_MAP = new Map(COUNTER_ICONS.map((c) => [c.key, c.Icon]));
+
+export function CounterIcon({ name, size = 16, className, style }: IconProps & { name?: string | null }) {
+  const Cmp = (name ? COUNTER_ICON_MAP.get(name) : undefined) ?? Heart;
+  return <Cmp size={size} strokeWidth={2} className={className} style={style} aria-hidden />;
 }
 
 /* ---------------------------------------------------------------- 界面常用 */
@@ -267,16 +325,23 @@ export {
   Activity,
   Annoyed,
   ArrowRight,
-  Bot,
+  Award,
+  Baby,
   BookOpen,
+  Bot,
+  Briefcase,
+  Cake,
   CalendarCheck,
   CalendarClock,
   CalendarDays,
+  CalendarHeart,
+  Car,
   ChartLine,
   ChartNoAxesColumn,
   Check,
   ChevronLeft,
   ChevronRight,
+  Church,
   Clock,
   CloudSun,
   Compass,
@@ -287,9 +352,16 @@ export {
   Ellipsis,
   ExternalLink,
   FileJson,
-  Frown,
   Flame,
+  Flower2,
+  Frown,
+  Gem,
+  Gift,
+  GraduationCap,
+  Heart,
   History,
+  Hourglass,
+  House,
   Inbox,
   Info,
   KeyRound,
@@ -300,12 +372,16 @@ export {
   LogOut,
   MapPin,
   Meh,
+  Milestone,
   Moon,
   MoonStar,
   NotebookPen,
+  PartyPopper,
+  PawPrint,
   Pencil,
   PieChart,
   PiggyBank,
+  Plane,
   Plus,
   Receipt,
   RefreshCw,
@@ -315,6 +391,8 @@ export {
   ShieldCheck,
   Smile,
   Sparkles,
+  Sprout,
+  Star,
   Sun,
   Tag,
   Target,
@@ -322,6 +400,7 @@ export {
   TrendingDown,
   TrendingUp,
   TriangleAlert,
+  Trophy,
   Undo2,
   User,
   Users,

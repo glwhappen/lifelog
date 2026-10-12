@@ -874,3 +874,46 @@ body[theme-mode='dark'] .heat i.l4 {
   background: var(--accent-soft);
   color: var(--accent);
 }
+
+/* ---------------------------------------------------------------- 纪念日 */
+
+.counter-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  border: 0;
+  background: none;
+  padding: 10px 2px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+.counter-row:last-child {
+  border-bottom: 0;
+}
+.counter-ic {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--bg-sub);
+  color: var(--fg-dim);
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+.counter-row:hover .counter-ic {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.counter-num {
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  font-size: 17px;
+  white-space: nowrap;
+  color: var(--fg);
+}
+.counter-num.accent {
+  color: var(--accent);
+}

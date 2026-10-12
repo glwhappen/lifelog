@@ -7,6 +7,7 @@ import { useMe, useToast } from '@/components/Providers';
 import { call, callGet, hhmm, money, moneyShort, todayLocal } from '@/lib/client';
 import { kindMeta } from '@/lib/kinds';
 import { EntryEditor, type EditableEntry } from '@/components/EntryEditor';
+import { CounterCard, type CounterView } from '@/components/CounterCard';
 import {
   CalendarClock,
   Check,
@@ -60,6 +61,7 @@ interface DayData {
   finance: { expense: number; income: number; items: Entry[] };
   places: Array<{ id: number; happened_at: string; place_name: string | null; city: string | null; lat: number; lng: number }>;
   summary: { mood: number | null; energy: number | null; summary: string | null; ai_summary: string | null } | null;
+  counters?: CounterView[];
 }
 
 export default function TodayPage() {
@@ -557,6 +559,9 @@ function Today() {
           )}
         </div>
       )}
+
+      {/* 纪念日：放在最后 —— 每天扫一眼「第 N 天」就够，不用挤在上面 */}
+      <CounterCard counters={data?.counters ?? []} onChanged={load} />
 
       <TaskEditor task={editTask} onClose={() => setEditTask(null)} onChanged={load} />
       <EntryEditor entry={editEntry} onClose={() => setEditEntry(null)} onChanged={load} />

@@ -47,16 +47,23 @@ describe('rateLimit —— 内存固定窗口限流', () => {
     expect(r.retryAfter).toBeGreaterThanOrEqual(1);
   });
 
+  it('大量 key 都记在内存里（先把计数验证清楚）', () => {
+    process.env.RATE_LIMIT_PRUNE_INTERVAL_MS = '0';
+    // 用长窗口，保证循环期间不会有过期的被清掉（否则这个断言会随机器快慢时好时坏）
+    for (let i = 0; i < 300; i++) rateLimit(`burst${i}`, 1, 60_000);
+    expect(rateLimitBucketCount()).toBe(300);
+    delete process.env.RATE_LIMIT_PRUNE_INTERVAL_MS;
+  });
+
   it('过期桶会被回收，内存不随时间无界增长（长跑进程的关键）', async () => {
     process.env.RATE_LIMIT_PRUNE_INTERVAL_MS = '0'; // 让每次调用都触发一次清理
-    for (let i = 0; i < 300; i++) rateLimit(`burst${i}`, 1, 20);
-    expect(rateLimitBucketCount()).toBe(300);
+    for (let i = 0; i < 50; i++) rateLimit(`short${i}`, 1, 20);
+    expect(rateLimitBucketCount()).toBe(50);
 
-    await new Promise((r) => setTimeout(r, 30)); // 等窗口过期
+    await new Promise((r) => setTimeout(r, 40)); // 等窗口全部过期
 
     rateLimit('trigger', 1, 20); // 触发清理
-    // 只剩下刚创建的这一个
-    expect(rateLimitBucketCount()).toBe(1);
+    expect(rateLimitBucketCount()).toBe(1); // 只剩刚创建的这一个
     delete process.env.RATE_LIMIT_PRUNE_INTERVAL_MS;
   });
 

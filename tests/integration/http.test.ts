@@ -193,7 +193,7 @@ describe.skipIf(!hasDb)('REST /api/v1', () => {
     // 而 src/lib/day.ts 内部的 getDay 返回 { tasks: { planned, done, ... } }。
     // 两者刻意不同（对模型更友好的少一层嵌套），这个断言就是防止它悄悄漂移。
     expect(Object.keys(d).sort()).toEqual(
-      ['counts', 'day', 'done', 'entries', 'finance', 'habits', 'inbox', 'isToday', 'overdue', 'pending', 'places', 'summary'].sort(),
+      ['counters', 'counts', 'day', 'done', 'entries', 'finance', 'habits', 'inbox', 'isToday', 'overdue', 'pending', 'places', 'summary'].sort(),
     );
     expect(d.counts).toHaveProperty('planned');
     expect(d.counts).toHaveProperty('inbox');
@@ -493,5 +493,104 @@ describe.skipIf(!hasDb)('全量数据导出（数据主权）', () => {
       new Request('http://life.test/api/export', { headers: { authorization: `Bearer ${key}` } }),
     );
     expect(res.status).toBe(200);
+  });
+});
+
+describe.skipIf(!hasDb)('纪念日 / 累计天数', () => {
+  useTestDb();
+
+  it('新增后能算「第几天」，并出现在 get_day 里', async () => {
+    const { key } = await createApiKey(TEST_SUB, 'c', ['read', 'write']);
+    const created = await v1('POST', ['add_counter'], {
+      key,
+      body: { name: '结婚纪念日', start_day: '2020-05-20', mode: 'since', repeat: 'yearly', icon: 'gem' },
+    });
+    const c = (await created.json()).data;
+    expect(c.name).toBe('结婚纪念日');
+    expect(c.mode).toBe('since');
+    expect(c.repeat).toBe('yearly');
+    expect(c.ordinal).toBeGreaterThan(2000);
+    expect(c.years).toBeGreaterThanOrEqual(6);
+    expect(c.summary).toContain('第');
+
+    const day = await v1('GET', ['get_day'], { key });
+    const d = (await day.json()).data;
+    expect(d.counters).toHaveLength(1);
+    expect(d.counters[0].name).toBe('结婚纪念日');
+    expect(d.counters[0].label).toMatch(/第 \d+ 天/);
+  });
+
+  it('离职第 N 天：起始当天是第 1 天', async () => {
+    const { key } = await createApiKey(TEST_SUB, 'c', ['read', 'write']);
+    await v1('POST', ['add_counter'], { key, body: { name: '离职', start_day: '今天', mode: 'since' } });
+    const res = await v1('GET', ['list_counters'], { key });
+    const list = (await res.json()).data;
+    expect(list[0].ordinal).toBe(1);
+    expect(list[0].label).toBe('第 1 天');
+    expect(list[0].is_today).toBe(true);
+  });
+
+  it('倒计时模式', async () => {
+    const { key } = await createApiKey(TEST_SUB, 'c', ['read', 'write']);
+    await v1('POST', ['add_counter'], {
+      key,
+      body: { name: '生日', start_day: daysAgo(-10), mode: 'until', repeat: 'yearly', icon: 'cake' },
+    });
+    const list = (await (await v1('GET', ['list_counters'], { key })).json()).data;
+    expect(list[0].mode).toBe('until');
+    expect(list[0].days_to_next).toBe(10);
+    expect(list[0].label).toBe('还有 10 天');
+  });
+
+  it('同名再添加是覆盖，且要能区分出「新增」还是「更新」', async () => {
+    const { key } = await createApiKey(TEST_SUB, 'c', ['read', 'write']);
+    const first = (await (await v1('POST', ['add_counter'], { key, body: { name: '搬家', start_day: '2024-01-01' } })).json()).data;
+    expect(first.created).toBe(true);
+
+    const second = (await (await v1('POST', ['add_counter'], { key, body: { name: '搬家', start_day: '2025-01-01' } })).json()).data;
+    expect(second.created).toBe(false); // 是覆盖，不能让用户以为又加了一条
+    expect(second.summary).toContain('已更新');
+
+    const list = (await (await v1('GET', ['list_counters'], { key })).json()).data;
+    expect(list).toHaveLength(1);
+    expect(list[0].start_day).toBe('2025-01-01');
+  });
+
+  it('AI 速记里加纪念日也能提示是新增还是覆盖', async () => {
+    const { describeAction } = await import('@/lib/capture');
+    expect(describeAction('add_counter', { name: 'X' }, { name: 'X', start_day: '2020-01-01', created: true })).toContain('添加');
+    expect(describeAction('add_counter', { name: 'X' }, { name: 'X', start_day: '2020-01-01', created: false })).toContain('更新');
+  });
+
+  it('修改可以按名称匹配', async () => {
+    const { key } = await createApiKey(TEST_SUB, 'c', ['read', 'write']);
+    await v1('POST', ['add_counter'], { key, body: { name: '结婚纪念日', start_day: '2020-05-20' } });
+    const upd = await v1('POST', ['update_counter'], { key, body: { counter: '结婚', start_day: '2021-06-01' } });
+    const c = (await upd.json()).data;
+    expect(c.start_day).toBe('2021-06-01');
+  });
+
+  it('删除', async () => {
+    const { key } = await createApiKey(TEST_SUB, 'c', ['read', 'write']);
+    await v1('POST', ['add_counter'], { key, body: { name: '待删', start_day: '2020-01-01' } });
+    const del = await v1('POST', ['delete_counter'], { key, body: { counter: '待删' } });
+    expect((await del.json()).data.ok).toBe(true);
+    expect((await (await v1('GET', ['list_counters'], { key })).json()).data).toHaveLength(0);
+  });
+
+  it('找不到时给出可读错误而不是抛异常', async () => {
+    const { key } = await createApiKey(TEST_SUB, 'c', ['read', 'write']);
+    const upd = await v1('POST', ['update_counter'], { key, body: { counter: '不存在', start_day: '2020-01-01' } });
+    expect((await upd.json()).data.ok).toBe(false);
+    const del = await v1('POST', ['delete_counter'], { key, body: { counter: '不存在' } });
+    expect((await del.json()).data.ok).toBe(false);
+  });
+
+  it('纪念日不影响其他功能的统计', async () => {
+    const { key } = await createApiKey(TEST_SUB, 'c', ['read', 'write']);
+    await v1('POST', ['add_counter'], { key, body: { name: '某纪念日', start_day: '2020-01-01' } });
+    const ov = (await (await v1('GET', ['stats_overview'], { key, query: 'days=30' })).json()).data;
+    expect(ov.entries).toBe(0);
+    expect(ov.topTags).toHaveLength(0);
   });
 });

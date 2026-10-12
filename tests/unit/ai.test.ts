@@ -197,3 +197,24 @@ describe('compactToolResult', () => {
     expect(compactToolResult({ ok: true })).toBe('{"ok":true}');
   });
 });
+
+describe('sanitizeReply —— 清掉模型回复里的 markdown', () => {
+  it('去掉加粗/代码/标题/列表符号（界面按纯文本渲染，留着会显示出星号）', async () => {
+    const { sanitizeReply } = await import('@/lib/capture');
+    expect(sanitizeReply('你结婚已经 **2337 天** 了')).toBe('你结婚已经 2337 天 了');
+    expect(sanitizeReply('__重要__ 的事情')).toBe('重要 的事情');
+    expect(sanitizeReply('用 `add_task` 记')).toBe('用 add_task 记');
+    expect(sanitizeReply('### 今天\n- 吃饭\n- 睡觉')).toBe('今天\n吃饭\n睡觉');
+  });
+
+  it('正常中文不受影响', async () => {
+    const { sanitizeReply } = await import('@/lib/capture');
+    expect(sanitizeReply('已记录：支出 ¥35（餐饮）')).toBe('已记录：支出 ¥35（餐饮）');
+  });
+
+  it('空的还是空', async () => {
+    const { sanitizeReply } = await import('@/lib/capture');
+    expect(sanitizeReply('')).toBe('');
+    expect(sanitizeReply('   ')).toBe('');
+  });
+});

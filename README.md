@@ -56,9 +56,12 @@ LifeLog 把所有值得记的东西收进**一张统一流水表**，再用 **MC
 | ![统计](docs/screenshot-stats.png) | ![MCP](docs/screenshot-mcp.png) |
 
 <p align="center">
-  <img src="docs/screenshot-mobile.png" width="290" alt="手机端">
-  <img src="docs/screenshot-timeline.png" width="420" alt="时间轴">
+  <img src="docs/screenshot-mobile.png" width="270" alt="手机端">
+  <img src="docs/screenshot-counters.png" width="430" alt="纪念日">
 </p>
+
+**纪念日**（今日页最下方）：结婚第 2337 天、离职第 11 天、距离生日还有 30 天。
+起始日当天算第 1 天；每年循环的会额外算出第几周年和距下一个还有几天。
 
 界面用 [lucide](https://lucide.dev) 线性图标（不是 emoji）：emoji 在 Apple / Google / Windows
 三套字体下长得都不一样，粗细也对不齐；线性图标跟着 `currentColor` 走，暗色模式自然一致。
@@ -76,6 +79,7 @@ LifeLog 把所有值得记的东西收进**一张统一流水表**，再用 **MC
 | **位置** | 打开页面即可记录当前位置；支持 GPX 轨迹导入与抽稀；地图回放 |
 | **健康指标** | 体重、腰围、睡眠、饮水、心情、精力、专注时长、运动……任意数值型指标 |
 | **每日总结** | 心情 1-5、精力 1-5、手写总结（AI 摘要可选） |
+| **纪念日 / 累计天数** | 「结婚第 2337 天」「离职第 11 天」「距离生日还有 30 天」；支持每年循环算周年 |
 
 **再加一条**：网页顶部的输入框**用模型理解人话**，不只是关键词匹配。
 
@@ -94,7 +98,7 @@ LifeLog 把所有值得记的东西收进**一张统一流水表**，再用 **MC
 
 这是本项目的核心卖点：**MCP 是一等公民，不是补丁**。
 
-内置 26 个工具，全部同时暴露给网页、REST 和 MCP：
+内置 34 个工具，全部同时暴露给网页、REST 和 MCP：
 
 **读**
 
@@ -110,6 +114,7 @@ LifeLog 把所有值得记的东西收进**一张统一流水表**，再用 **MC
 | `list_locations` | 位置轨迹 + 总里程 |
 | `search_all` | 全库关键词搜索 |
 | `list_habits` / `who_am_i` | 习惯清单 / 身份与连续记录天数 |
+| `list_counters` | 纪念日与累计天数（已算好第几天、还有几天、几周年） |
 
 **写**
 
@@ -122,6 +127,7 @@ LifeLog 把所有值得记的东西收进**一张统一流水表**，再用 **MC
 | `log_metric` | 体重/睡眠/饮水/心情/专注…… |
 | `log_location` | 位置（可自动逆地理编码） |
 | `save_summary` | 当天总结 + 心情/精力 |
+| `add_counter` / `update_counter` / `delete_counter` | 纪念日与累计天数 |
 | `update_entry` / `delete_entry` | 改删流水 |
 | `quick_capture` | 一句话智能分流 |
 
@@ -138,6 +144,8 @@ LifeLog 把所有值得记的东西收进**一张统一流水表**，再用 **MC
 | 把买牛奶挪到下周三 | 顺延那条待办 |
 | 删掉刚才那条 | **先让你确认**，再删除 |
 | 午饭 35，顺便把体检标记完成 | 一次记两笔 |
+| 帮我加个纪念日，2021年3月8日入职 | 建一个「入职」累计天数 |
+| 我结婚多久了 / 离职第几天 | 直接回答，不用自己翻 |
 
 - 每个动作都能**一键撤销**（改过的记录会回滚到改动前的值）
 - 删除类操作不直接执行，只登记成待确认，你点了确认才算
@@ -351,6 +359,7 @@ focus reading gratitude dream social weather location metric`
 | `habits` + `habit_logs` | `(habit_id, day)` 唯一约束保证打卡幂等；计数型要累加 |
 | `locations` | 数据量最大（轨迹点），需要地理索引与独立抽稀策略 |
 | `daily_summaries` | `(user_id, day)` 唯一，承载心情/精力/总结 |
+| `counters` | 纪念日：`(user_id, name)` 唯一，同名即覆盖（工具会回报是新增还是更新） |
 | `api_keys` | 只存 sha256，独立吊销 |
 | `attachments` | 截图/录音（供后续 AI 解析），bytea |
 
@@ -470,6 +479,7 @@ docker compose up -d life                                          # 没问题�
 - [x] 每日总结、心情/精力
 - [x] MCP 服务端 + REST + API Key + Markdown 导出
 - [x] 自然语言输入框：模型理解「记录/修改/删除」并调用工具（含撤销与删除确认）
+- [x] 纪念日 / 累计天数（第 N 天、周年、倒计时）
 - [ ] 语音说一句 → 自动记录（可复用 asr.hsfp.cn）
 - [ ] 截图 / 文件上传 → AI 识别后自动记录（如账单截图→支出）
 - [x] 流水/待办的编辑与删除（页面上就能改错字）

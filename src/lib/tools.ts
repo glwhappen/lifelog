@@ -9,6 +9,15 @@ import { financeSummary, frequentCategories } from './finance';
 import { overview } from './stats';
 import { getDay, loggingStreak, saveSummary } from './day';
 import { digest } from './digest';
+import {
+  computeCounter,
+  counterSummary,
+  deleteCounter,
+  findCounter,
+  listCounterViews,
+  updateCounter,
+  upsertCounter,
+} from './counters';
 import { one } from './db';
 
 /**
@@ -107,6 +116,21 @@ function readTools(): ToolDef[] {
           },
           places: d.locations,
           summary: d.summary,
+          counters: (await listCounterViews(uid(ctx), tz(ctx), day)).map((v) => ({
+            id: v.id,
+            name: v.name,
+            icon: v.icon,
+            start_day: v.start_day,
+            mode: v.mode,
+            repeat: v.repeat,
+            ordinal: v.ordinal,
+            label: v.label,
+            days: v.days,
+            years: v.years,
+            days_to_next: v.daysToNext,
+            is_today: v.isToday,
+            summary: counterSummary(v),
+          })),
         };
       },
     },
@@ -274,6 +298,38 @@ function readTools(): ToolDef[] {
           listTasks(uid(ctx), tz(ctx), { q: a.q, state: 'all', limit: a.limit ?? 50 }),
         ]);
         return { entries, tasks };
+      },
+    },
+    {
+      name: 'list_counters',
+      title: '纪念日 / 累计天数',
+      description:
+        '列出全部纪念日与累计天数（结婚纪念日、离职第 N 天、距离生日还有几天…），并算好当前是第几天、还有几天。回答「我结婚多久了」「离职第几天」用它。',
+      scope: 'read',
+      inputSchema: {
+        type: 'object',
+        properties: { date: { type: 'string', description: '按哪天计算，默认今天' } },
+      },
+      handler: async (ctx, a) => {
+        const day = a.date ? normDay(String(a.date), tz(ctx)) : undefined;
+        const views = await listCounterViews(uid(ctx), tz(ctx), day);
+        return views.map((v) => ({
+          id: v.id,
+          name: v.name,
+          icon: v.icon,
+          start_day: v.start_day,
+          mode: v.mode,
+          repeat: v.repeat,
+          days: v.days,
+          ordinal: v.ordinal,
+          label: v.label,
+          years: v.years,
+          next_day: v.nextDay,
+          days_to_next: v.daysToNext,
+          is_today: v.isToday,
+          summary: counterSummary(v),
+          note: v.note,
+        }));
       },
     },
     {
@@ -490,6 +546,71 @@ function writeTools(): ToolDef[] {
       scope: 'write',
       inputSchema: { type: 'object', properties: { habit: { type: 'string' } }, required: ['habit'] },
       handler: async (ctx, a) => ({ ok: await deleteHabit(uid(ctx), a.habit) }),
+    },
+    {
+      name: 'add_counter',
+      title: '添加纪念日',
+      description:
+        '添加或按名称覆盖一个纪念日 / 累计天数。mode: since 从那天起累计（离职第 N 天）/ until 距离那天还有几天（生日倒计时）；repeat: none 只算一次 / yearly 每年循环。',
+      scope: 'write',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', description: '如「结婚纪念日」「离职」「生日」' },
+          start_day: { type: 'string', description: '起始日 / 目标日，支持 今天/昨天/2020-05-20' },
+          mode: { type: 'string', enum: ['since', 'until'], description: 'since 累计（默认）/ until 倒计时' },
+          repeat: { type: 'string', enum: ['none', 'yearly'], description: 'none 只算一次（默认）/ yearly 每年循环' },
+          icon: { type: 'string', description: '图标键名，如 gem 结婚 / briefcase 离职 / cake 生日' },
+          note: { type: 'string' },
+        },
+        required: ['name', 'start_day'],
+      },
+      handler: async (ctx, a) => {
+        const { counter, created } = await upsertCounter(uid(ctx), tz(ctx), a);
+        const view = computeCounter(counter, todayIn(tz(ctx)));
+        return {
+          ...view,
+          created,
+          summary: `${created ? '已添加' : '已更新'}纪念日「${counter.name}」，${counterSummary(view)}`,
+        };
+      },
+    },
+    {
+      name: 'update_counter',
+      title: '修改纪念日',
+      description: '修改纪念日的名称 / 起始日 / 模式 / 是否每年循环 / 图标。counter 可传 id 或名称。',
+      scope: 'write',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          counter: { type: 'string' },
+          name: { type: 'string' },
+          start_day: { type: 'string' },
+          mode: { type: 'string', enum: ['since', 'until'] },
+          repeat: { type: 'string', enum: ['none', 'yearly'] },
+          icon: { type: 'string' },
+          note: { type: 'string' },
+        },
+        required: ['counter'],
+      },
+      handler: async (ctx, a) => {
+        const { counter, ...patch } = a;
+        const c = await updateCounter(uid(ctx), tz(ctx), counter, patch);
+        if (!c) return { ok: false, error: `没找到纪念日：${counter}` };
+        return { ok: true, ...computeCounter(c, todayIn(tz(ctx))) };
+      },
+    },
+    {
+      name: 'delete_counter',
+      title: '删除纪念日',
+      description: '删除一个纪念日（先 list_counters 拿到 id 或名称）。',
+      scope: 'write',
+      inputSchema: { type: 'object', properties: { counter: { type: 'string' } }, required: ['counter'] },
+      handler: async (ctx, a) => {
+        const c = await findCounter(uid(ctx), a.counter);
+        if (!c) return { ok: false, error: `没找到纪念日：${a.counter}` };
+        return { ok: await deleteCounter(uid(ctx), a.counter) };
+      },
     },
     {
       name: 'log_metric',
